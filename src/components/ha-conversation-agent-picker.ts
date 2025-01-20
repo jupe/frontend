@@ -1,21 +1,17 @@
 import { mdiCog } from "@mdi/js";
-import {
-  css,
-  CSSResultGroup,
-  html,
-  LitElement,
-  nothing,
-  PropertyValues,
-} from "lit";
+import type { PropertyValues } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../common/dom/fire_event";
 import { stopPropagation } from "../common/dom/stop_propagation";
 import { debounce } from "../common/util/debounce";
-import { ConfigEntry, getConfigEntry } from "../data/config_entries";
-import { Agent, listAgents } from "../data/conversation";
+import type { ConfigEntry } from "../data/config_entries";
+import { getConfigEntry } from "../data/config_entries";
+import type { Agent } from "../data/conversation";
+import { listAgents } from "../data/conversation";
 import { fetchIntegrationManifest } from "../data/integration";
 import { showOptionsFlowDialog } from "../dialogs/config-flow/show-dialog-options-flow";
-import { HomeAssistant } from "../types";
+import type { HomeAssistant } from "../types";
 import "./ha-list-item";
 import "./ha-select";
 import type { HaSelect } from "./ha-select";
@@ -146,7 +142,7 @@ export class HaConversationAgentPicker extends LitElement {
       this._configEntry = (
         await getConfigEntry(this.hass, regEntry.config_entry_id)
       ).config_entry;
-    } catch (err) {
+    } catch (_err) {
       this._configEntry = undefined;
     }
   }
@@ -194,20 +190,18 @@ export class HaConversationAgentPicker extends LitElement {
     });
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      :host {
-        display: flex;
-        align-items: center;
-      }
-      ha-select {
-        width: 100%;
-      }
-      ha-icon-button {
-        color: var(--secondary-text-color);
-      }
-    `;
-  }
+  static styles = css`
+    :host {
+      display: flex;
+      align-items: center;
+    }
+    ha-select {
+      width: 100%;
+    }
+    ha-icon-button {
+      color: var(--secondary-text-color);
+    }
+  `;
 
   private _changed(ev): void {
     const target = ev.target as HaSelect;

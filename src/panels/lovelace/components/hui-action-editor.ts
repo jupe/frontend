@@ -1,30 +1,27 @@
-import {
-  css,
-  CSSResultGroup,
-  html,
-  LitElement,
-  nothing,
-  PropertyValues,
-} from "lit";
+import type { PropertyValues } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, query } from "lit/decorators";
 import memoizeOne from "memoize-one";
 import { fireEvent } from "../../../common/dom/fire_event";
 import { stopPropagation } from "../../../common/dom/stop_propagation";
 import "../../../components/ha-assist-pipeline-picker";
-import { HaFormSchema, SchemaUnion } from "../../../components/ha-form/types";
+import type {
+  HaFormSchema,
+  SchemaUnion,
+} from "../../../components/ha-form/types";
 import "../../../components/ha-help-tooltip";
 import "../../../components/ha-navigation-picker";
 import "../../../components/ha-service-control";
-import {
+import type {
   ActionConfig,
   CallServiceActionConfig,
   NavigateActionConfig,
   UrlActionConfig,
 } from "../../../data/lovelace/config/action";
-import { ServiceAction } from "../../../data/script";
-import { HomeAssistant } from "../../../types";
-import { EditorTarget } from "../editor/types";
-import { HaSelect } from "../../../components/ha-select";
+import type { ServiceAction } from "../../../data/script";
+import type { HomeAssistant } from "../../../types";
+import type { EditorTarget } from "../editor/types";
+import type { HaSelect } from "../../../components/ha-select";
 
 export type UiAction = Exclude<ActionConfig["action"], "fire-dom-event">;
 
@@ -74,13 +71,13 @@ const ASSIST_SCHEMA = [
 export class HuiActionEditor extends LitElement {
   @property({ attribute: false }) public config?: ActionConfig;
 
-  @property() public label?: string;
+  @property({ attribute: false }) public label?: string;
 
   @property({ attribute: false }) public actions?: UiAction[];
 
   @property({ attribute: false }) public defaultAction?: UiAction;
 
-  @property() public tooltipText?: string;
+  @property({ attribute: false }) public tooltipText?: string;
 
   @property({ attribute: false }) public hass?: HomeAssistant;
 
@@ -318,45 +315,43 @@ export class HuiActionEditor extends LitElement {
     fireEvent(this, "value-changed", { value });
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      .dropdown {
-        position: relative;
-      }
-      ha-help-tooltip {
-        position: absolute;
-        right: 40px;
-        top: 16px;
-        inset-inline-start: initial;
-        inset-inline-end: 40px;
-        direction: var(--direction);
-      }
-      ha-select,
-      ha-textfield {
-        width: 100%;
-      }
-      ha-service-control,
-      ha-navigation-picker,
-      ha-form {
-        display: block;
-      }
-      ha-textfield,
-      ha-service-control,
-      ha-navigation-picker,
-      ha-form {
-        margin-top: 8px;
-      }
-      ha-service-control {
-        --service-control-padding: 0;
-      }
-      ha-formfield {
-        display: flex;
-        height: 56px;
-        align-items: center;
-        --mdc-typography-body2-font-size: 1em;
-      }
-    `;
-  }
+  static styles = css`
+    .dropdown {
+      position: relative;
+    }
+    ha-help-tooltip {
+      position: absolute;
+      right: 40px;
+      top: 16px;
+      inset-inline-start: initial;
+      inset-inline-end: 40px;
+      direction: var(--direction);
+    }
+    ha-select,
+    ha-textfield {
+      width: 100%;
+    }
+    ha-service-control,
+    ha-navigation-picker,
+    ha-form {
+      display: block;
+    }
+    ha-textfield,
+    ha-service-control,
+    ha-navigation-picker,
+    ha-form {
+      margin-top: 8px;
+    }
+    ha-service-control {
+      --service-control-padding: 0;
+    }
+    ha-formfield {
+      display: flex;
+      height: 56px;
+      align-items: center;
+      --mdc-typography-body2-font-size: 1em;
+    }
+  `;
 }
 
 declare global {

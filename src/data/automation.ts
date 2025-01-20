@@ -1,13 +1,14 @@
-import {
+import type {
   HassEntityAttributeBase,
   HassEntityBase,
 } from "home-assistant-js-websocket";
 import { navigate } from "../common/navigate";
 import { ensureArray } from "../common/array/ensure-array";
-import { Context, HomeAssistant } from "../types";
-import { BlueprintInput } from "./blueprint";
-import { DeviceCondition, DeviceTrigger } from "./device_automation";
-import { Action, MODES, migrateAutomationAction } from "./script";
+import type { Context, HomeAssistant } from "../types";
+import type { BlueprintInput } from "./blueprint";
+import type { DeviceCondition, DeviceTrigger } from "./device_automation";
+import type { Action, MODES } from "./script";
+import { migrateAutomationAction } from "./script";
 import { createSearchParam } from "../common/url/search-params";
 
 export const AUTOMATION_DEFAULT_MODE: (typeof MODES)[number] = "single";
@@ -290,9 +291,10 @@ export interface ShorthandNotCondition extends ShorthandBaseCondition {
   not: Condition[];
 }
 
-export interface AutomationElementGroup {
-  [key: string]: { icon?: string; members?: AutomationElementGroup };
-}
+export type AutomationElementGroup = Record<
+  string,
+  { icon?: string; members?: AutomationElementGroup }
+>;
 
 export type Condition =
   | StateCondition
@@ -365,7 +367,7 @@ export const saveAutomationConfig = (
   hass: HomeAssistant,
   id: string,
   config: AutomationConfig
-) => hass.callApi<void>("POST", `config/automation/config/${id}`, config);
+) => hass.callApi<undefined>("POST", `config/automation/config/${id}`, config);
 
 export const normalizeAutomationConfig = <
   T extends Partial<AutomationConfig> | AutomationConfig,
@@ -424,6 +426,10 @@ export const migrateAutomationConfig = <
 export const migrateAutomationTrigger = (
   trigger: Trigger | Trigger[]
 ): Trigger | Trigger[] => {
+  if (!trigger) {
+    return trigger;
+  }
+
   if (Array.isArray(trigger)) {
     return trigger.map(migrateAutomationTrigger) as Trigger[];
   }
@@ -514,8 +520,8 @@ export const testCondition = (
     variables,
   });
 
-export type AutomationClipboard = {
+export interface AutomationClipboard {
   trigger?: Trigger;
   condition?: Condition;
   action?: Action;
-};
+}

@@ -1,10 +1,11 @@
-import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
 import memoizeOne from "memoize-one";
-import { migrateAutomationTrigger, Trigger } from "../../data/automation";
-import { TriggerSelector } from "../../data/selector";
+import type { Trigger } from "../../data/automation";
+import { migrateAutomationTrigger } from "../../data/automation";
+import type { TriggerSelector } from "../../data/selector";
 import "../../panels/config/automation/trigger/ha-automation-trigger";
-import { HomeAssistant } from "../../types";
+import type { HomeAssistant } from "../../types";
 
 @customElement("ha-selector-trigger")
 export class HaTriggerSelector extends LitElement {
@@ -32,24 +33,21 @@ export class HaTriggerSelector extends LitElement {
         .disabled=${this.disabled}
         .triggers=${this._triggers(this.value)}
         .hass=${this.hass}
-        .path=${this.selector.trigger?.path}
       ></ha-automation-trigger>
     `;
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      ha-automation-trigger {
-        display: block;
-        margin-bottom: 16px;
-      }
-      label {
-        display: block;
-        margin-bottom: 4px;
-        font-weight: 500;
-      }
-    `;
-  }
+  static styles = css`
+    ha-automation-trigger {
+      display: block;
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+  `;
 }
 
 declare global {

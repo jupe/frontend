@@ -1,4 +1,4 @@
-import {
+import type {
   HassEntity,
   HassEntityAttributeBase,
 } from "home-assistant-js-websocket";
@@ -12,7 +12,7 @@ import type { DataTableColumnContainer } from "../../../../src/components/data-t
 import "../../../../src/components/entity/state-badge";
 import { provideHass } from "../../../../src/fake_data/provide_hass";
 import { mockIcons } from "../../../../demo/src/stubs/icons";
-import { HomeAssistant } from "../../../../src/types";
+import type { HomeAssistant } from "../../../../src/types";
 
 const SENSOR_DEVICE_CLASSES = [
   "apparent_power",
@@ -321,13 +321,13 @@ function createEntity(
   };
 }
 
-type EntityRowData = {
+interface EntityRowData {
   stateObj: HassEntity;
   entity_id: string;
   state: string;
   device_class?: string;
   domain: string;
-};
+}
 
 function createRowData(stateObj: HassEntity): EntityRowData {
   return {
@@ -429,17 +429,15 @@ export class DemoEntityState extends LitElement {
     `;
   }
 
-  static get styles() {
-    return css`
-      .color {
-        display: block;
-        height: 20px;
-        width: 20px;
-        border-radius: 10px;
-        background-color: rgb(--color);
-      }
-    `;
-  }
+  static styles = css`
+    .color {
+      display: block;
+      height: 20px;
+      width: 20px;
+      border-radius: 10px;
+      background-color: rgb(--color);
+    }
+  `;
 }
 
 declare global {

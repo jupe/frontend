@@ -1,14 +1,9 @@
 import { mdiCodeBraces, mdiListBoxOutline } from "@mdi/js";
-import {
-  css,
-  CSSResultGroup,
-  html,
-  LitElement,
-  nothing,
-  TemplateResult,
-} from "lit";
+import type { TemplateResult } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators";
-import { fireEvent, HASSDomEvent } from "../../../common/dom/fire_event";
+import type { HASSDomEvent } from "../../../common/dom/fire_event";
+import { fireEvent } from "../../../common/dom/fire_event";
 import "../../../components/ha-icon-button";
 import "../../../components/ha-icon-button-prev";
 import type { HomeAssistant } from "../../../types";
@@ -166,20 +161,18 @@ export class HuiSubElementEditor extends LitElement {
     this._guiModeAvailable = ev.detail.guiModeAvailable;
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .back-title {
-        display: flex;
-        align-items: center;
-        font-size: 18px;
-      }
-    `;
-  }
+  static styles = css`
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .back-title {
+      display: flex;
+      align-items: center;
+      font-size: 18px;
+    }
+  `;
 }
 
 declare global {

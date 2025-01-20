@@ -1,22 +1,23 @@
-import { css, html, LitElement, nothing, PropertyValues } from "lit";
+import type { PropertyValues } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
 import { fireEvent } from "../../common/dom/fire_event";
 import "../../components/ha-circular-progress";
 import { ON, UNAVAILABLE } from "../../data/entity";
 import {
   updateCanInstall,
-  UpdateEntity,
+  type UpdateEntity,
   updateIsInstalling,
   updateUsesProgress,
 } from "../../data/update";
-import { HomeAssistant } from "../../types";
+import type { HomeAssistant } from "../../types";
 import { AssistantSetupStyles } from "./styles";
 
 @customElement("ha-voice-assistant-setup-step-update")
 export class HaVoiceAssistantSetupStepUpdate extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property() public updateEntityId?: string;
+  @property({ attribute: false }) public updateEntityId?: string;
 
   private _updated = false;
 
@@ -64,16 +65,24 @@ export class HaVoiceAssistantSetupStepUpdate extends LitElement {
     const progressIsNumeric = stateObj && updateUsesProgress(stateObj);
 
     return html`<div class="content">
-      <img src="/static/images/voice-assistant/update.gif" />
+      <img
+        src="/static/images/voice-assistant/update.png"
+        alt="Casita Home Assistant loading logo"
+      />
       <h1>
         ${stateObj &&
         (stateObj.state === "unavailable" || updateIsInstalling(stateObj))
-          ? "Updating your voice assistant"
-          : "Checking for updates"}
+          ? this.hass.localize(
+              "ui.panel.config.voice_assistants.satellite_wizard.update.title"
+            )
+          : this.hass.localize(
+              "ui.panel.config.voice_assistants.satellite_wizard.update.checking"
+            )}
       </h1>
       <p class="secondary">
-        We are making sure you have the latest and greatest version of your
-        voice assistant. This may take a few minutes.
+        ${this.hass.localize(
+          "ui.panel.config.voice_assistants.satellite_wizard.update.secondary"
+        )}
       </p>
       <ha-circular-progress
         .value=${progressIsNumeric

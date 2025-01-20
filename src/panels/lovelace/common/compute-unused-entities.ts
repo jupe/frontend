@@ -1,6 +1,6 @@
-import { ActionConfig } from "../../../data/lovelace/config/action";
-import { LovelaceConfig } from "../../../data/lovelace/config/types";
-import { HomeAssistant } from "../../../types";
+import type { ActionConfig } from "../../../data/lovelace/config/action";
+import type { LovelaceConfig } from "../../../data/lovelace/config/types";
+import type { HomeAssistant } from "../../../types";
 
 export const EXCLUDED_DOMAINS = ["zone", "persistent_notification"];
 
@@ -20,12 +20,15 @@ const addFromAction = (entities: Set<string>, actionConfig: ActionConfig) => {
   if (!Array.isArray(entityIds)) {
     entityIds = [entityIds];
   }
-  for (const entityId of entityIds as Array<string>) {
+  for (const entityId of entityIds as string[]) {
     entities.add(entityId);
   }
 };
 
 const addEntityId = (entities: Set<string>, entity) => {
+  if (!entity) {
+    return;
+  }
   if (typeof entity === "string") {
     entities.add(entity);
     return;
@@ -81,7 +84,7 @@ export const calcUnusedEntities = (
   hass: HomeAssistant,
   usedEntities: Set<string>
 ): Set<string> => {
-  const unusedEntities: Set<string> = new Set();
+  const unusedEntities = new Set<string>();
 
   for (const entity of Object.keys(hass.states)) {
     if (

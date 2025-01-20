@@ -1,6 +1,6 @@
 import { customElement } from "lit/decorators";
 import { getRowElementClass } from "../../create-element/create-row-element";
-import { LovelaceRowConfig } from "../../entity-rows/types";
+import type { LovelaceRowConfig } from "../../entity-rows/types";
 import type { LovelaceRowEditor } from "../../types";
 import { HuiTypedElementEditor } from "../hui-typed-element-editor";
 import "../config-elements/hui-generic-entity-row-editor";
@@ -22,7 +22,7 @@ export class HuiRowElementEditor extends HuiTypedElementEditor<LovelaceRowConfig
   }
 
   protected async getConfigElement(): Promise<LovelaceRowEditor | undefined> {
-    if (this.configElementType! === GENERIC_ROW_TYPE) {
+    if (this.configElementType === GENERIC_ROW_TYPE) {
       return document.createElement("hui-generic-entity-row-editor");
     }
 

@@ -1,4 +1,5 @@
-import { css, CSSResultGroup, html, LitElement, PropertyValues } from "lit";
+import type { PropertyValues } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { styleMap } from "lit/directives/style-map";
 import memoizeOne from "memoize-one";
@@ -7,14 +8,16 @@ import { supportsFeature } from "../../common/entity/supports-feature";
 import "../../components/ha-control-select";
 import type { ControlSelectOption } from "../../components/ha-control-select";
 import "../../components/ha-control-slider";
-import {
-  ALARM_MODES,
+import type {
   AlarmControlPanelEntity,
   AlarmMode,
+} from "../../data/alarm_control_panel";
+import {
+  ALARM_MODES,
   setProtectedAlarmControlPanelMode,
 } from "../../data/alarm_control_panel";
 import { UNAVAILABLE } from "../../data/entity";
-import { HomeAssistant } from "../../types";
+import type { HomeAssistant } from "../../types";
 
 @customElement("ha-state-control-alarm_control_panel-modes")
 export class HaStateControlAlarmControlPanelModes extends LitElement {
@@ -57,7 +60,7 @@ export class HaStateControlAlarmControlPanelModes extends LitElement {
 
     try {
       await this._setMode(mode);
-    } catch (err) {
+    } catch (_err) {
       this._currentMode = oldMode;
     }
   }
@@ -92,20 +95,18 @@ export class HaStateControlAlarmControlPanelModes extends LitElement {
     `;
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      ha-control-select {
-        height: 45vh;
-        max-height: max(320px, var(--modes-count, 1) * 80px);
-        min-height: max(200px, var(--modes-count, 1) * 80px);
-        --control-select-thickness: 130px;
-        --control-select-border-radius: 36px;
-        --control-select-color: var(--primary-color);
-        --control-select-background: var(--disabled-color);
-        --control-select-background-opacity: 0.2;
-      }
-    `;
-  }
+  static styles = css`
+    ha-control-select {
+      height: 45vh;
+      max-height: max(320px, var(--modes-count, 1) * 80px);
+      min-height: max(200px, var(--modes-count, 1) * 80px);
+      --control-select-thickness: 130px;
+      --control-select-border-radius: 36px;
+      --control-select-color: var(--primary-color);
+      --control-select-background: var(--disabled-color);
+      --control-select-background-opacity: 0.2;
+    }
+  `;
 }
 
 declare global {

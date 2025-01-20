@@ -1,11 +1,9 @@
 import { ensureArray } from "../../../common/array/ensure-array";
-import {
-  MediaQueriesListener,
-  listenMediaQuery,
-} from "../../../common/dom/media_query";
+import type { MediaQueriesListener } from "../../../common/dom/media_query";
+import { listenMediaQuery } from "../../../common/dom/media_query";
 import { isValidEntityId } from "../../../common/entity/valid_entity_id";
 import { UNAVAILABLE } from "../../../data/entity";
-import { HomeAssistant } from "../../../types";
+import type { HomeAssistant } from "../../../types";
 
 export type Condition =
   | NumericStateCondition
@@ -80,7 +78,7 @@ function checkStateCondition(
       : UNAVAILABLE;
   let value = condition.state ?? condition.state_not;
 
-  // Handle entity_id, UI should be updated for conditionnal card (filters does not have UI for now)
+  // Handle entity_id, UI should be updated for conditional card (filters does not have UI for now)
   if (Array.isArray(value)) {
     const entityValues = value
       .map((v) => getValueFromEntityId(hass, v))
@@ -108,7 +106,7 @@ function checkStateNumericCondition(
   let above = condition.above;
   let below = condition.below;
 
-  // Handle entity_id, UI should be updated for conditionnal card (filters does not have UI for now)
+  // Handle entity_id, UI should be updated for conditional card (filters does not have UI for now)
   if (typeof above === "string") {
     above = getValueFromEntityId(hass, above) ?? above;
   }
@@ -190,7 +188,7 @@ export function checkConditionsMet(
 export function extractConditionEntityIds(
   conditions: Condition[]
 ): Set<string> {
-  const entityIds: Set<string> = new Set();
+  const entityIds = new Set<string>();
   for (const condition of conditions) {
     if (condition.condition === "numeric_state") {
       if (

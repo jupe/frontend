@@ -1,11 +1,5 @@
-import {
-  css,
-  CSSResultGroup,
-  html,
-  LitElement,
-  nothing,
-  PropertyValues,
-} from "lit";
+import type { PropertyValues } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import memoizeOne from "memoize-one";
 import { assert } from "superstruct";
@@ -14,9 +8,10 @@ import { computeDomain } from "../../../../../common/entity/compute_domain";
 import { computeObjectId } from "../../../../../common/entity/compute_object_id";
 import { hasTemplate } from "../../../../../common/string/has-template";
 import "../../../../../components/ha-service-control";
-import { ServiceAction, serviceActionStruct } from "../../../../../data/script";
+import type { ServiceAction } from "../../../../../data/script";
+import { serviceActionStruct } from "../../../../../data/script";
 import type { HomeAssistant } from "../../../../../types";
-import { ActionElement } from "../ha-automation-action-row";
+import type { ActionElement } from "../ha-automation-action-row";
 
 @customElement("ha-automation-action-service")
 export class HaServiceAction extends LitElement implements ActionElement {
@@ -200,35 +195,33 @@ export class HaServiceAction extends LitElement implements ActionElement {
     }
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      ha-service-control {
-        display: block;
-        margin: 0 -16px;
-      }
-      ha-settings-row {
-        margin: 0 -16px;
-        padding: var(--service-control-padding, 0 16px);
-      }
-      ha-settings-row {
-        --paper-time-input-justify-content: flex-end;
-        --settings-row-content-width: 100%;
-        --settings-row-prefix-display: contents;
-        border-top: var(
-          --service-control-items-border-top,
-          1px solid var(--divider-color)
-        );
-      }
-      ha-checkbox {
-        margin-left: -16px;
-        margin-inline-start: -16px;
-        margin-inline-end: initial;
-      }
-      .checkbox-spacer {
-        width: 32px;
-      }
-    `;
-  }
+  static styles = css`
+    ha-service-control {
+      display: block;
+      margin: 0 -16px;
+    }
+    ha-settings-row {
+      margin: 0 -16px;
+      padding: var(--service-control-padding, 0 16px);
+    }
+    ha-settings-row {
+      --paper-time-input-justify-content: flex-end;
+      --settings-row-content-width: 100%;
+      --settings-row-prefix-display: contents;
+      border-top: var(
+        --service-control-items-border-top,
+        1px solid var(--divider-color)
+      );
+    }
+    ha-checkbox {
+      margin-left: -16px;
+      margin-inline-start: -16px;
+      margin-inline-end: initial;
+    }
+    .checkbox-spacer {
+      width: 32px;
+    }
+  `;
 }
 
 declare global {

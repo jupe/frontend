@@ -1,20 +1,12 @@
-/* eslint-disable lit/prefer-static-styles */
-import {
-  css,
-  CSSResultGroup,
-  html,
-  LitElement,
-  PropertyValues,
-  ReactiveElement,
-  TemplateResult,
-} from "lit";
+import type { PropertyValues, TemplateResult } from "lit";
+import { css, html, LitElement, ReactiveElement } from "lit";
 import { customElement, property } from "lit/decorators";
 import { dynamicElement } from "../../common/dom/dynamic-element-directive";
 import { fireEvent } from "../../common/dom/fire_event";
-import { HomeAssistant } from "../../types";
+import type { HomeAssistant } from "../../types";
 import "../ha-alert";
 import "../ha-selector/ha-selector";
-import { HaFormDataContainer, HaFormElement, HaFormSchema } from "./types";
+import type { HaFormDataContainer, HaFormElement, HaFormSchema } from "./types";
 
 const LOAD_ELEMENTS = {
   boolean: () => import("./ha-form-boolean"),
@@ -257,19 +249,17 @@ export class HaForm extends LitElement implements HaFormElement {
     return this.computeWarning ? this.computeWarning(warning, schema) : warning;
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      .root > * {
-        display: block;
-      }
-      .root > *:not([own-margin]):not(:last-child) {
-        margin-bottom: 24px;
-      }
-      ha-alert[own-margin] {
-        margin-bottom: 4px;
-      }
-    `;
-  }
+  static styles = css`
+    .root > * {
+      display: block;
+    }
+    .root > *:not([own-margin]):not(:last-child) {
+      margin-bottom: 24px;
+    }
+    ha-alert[own-margin] {
+      margin-bottom: 4px;
+    }
+  `;
 }
 
 declare global {

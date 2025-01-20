@@ -4,6 +4,7 @@ import { property, query, state } from "lit/decorators";
 import { computeRTL } from "../common/util/compute_rtl";
 import "../components/ha-button";
 import "../components/ha-toast";
+import "../components/ha-icon-button";
 import type { HaToast } from "../components/ha-toast";
 import type { HomeAssistant } from "../types";
 
@@ -72,7 +73,7 @@ class NotificationManager extends LitElement {
               <ha-button
                 slot="action"
                 .label=${this._parameters?.action.text}
-                @click=${this.buttonClicked}
+                @click=${this._buttonClicked}
               ></ha-button>
             `
           : nothing}
@@ -90,7 +91,7 @@ class NotificationManager extends LitElement {
     `;
   }
 
-  private buttonClicked() {
+  private _buttonClicked() {
     this._toast?.close("action");
     if (this._parameters?.action) {
       this._parameters?.action.action();

@@ -1,4 +1,4 @@
-import { HomeAssistant } from "../types";
+import type { HomeAssistant } from "../types";
 
 export interface ThreadRouter {
   instance_name: string;
@@ -35,7 +35,7 @@ export interface ThreadRouterDiscoveryEvent {
 }
 
 class DiscoveryStream {
-  routers: { [key: string]: ThreadRouter };
+  routers: Record<string, ThreadRouter>;
 
   constructor() {
     this.routers = {};

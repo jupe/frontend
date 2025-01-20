@@ -1,14 +1,10 @@
-import { LovelaceBadgeConfig } from "../../../data/lovelace/config/badge";
-import { LovelaceCardConfig } from "../../../data/lovelace/config/card";
-import {
-  LovelaceSectionRawConfig,
-  isStrategySection,
-} from "../../../data/lovelace/config/section";
-import { LovelaceConfig } from "../../../data/lovelace/config/types";
-import {
-  LovelaceViewRawConfig,
-  isStrategyView,
-} from "../../../data/lovelace/config/view";
+import type { LovelaceBadgeConfig } from "../../../data/lovelace/config/badge";
+import type { LovelaceCardConfig } from "../../../data/lovelace/config/card";
+import type { LovelaceSectionRawConfig } from "../../../data/lovelace/config/section";
+import { isStrategySection } from "../../../data/lovelace/config/section";
+import type { LovelaceConfig } from "../../../data/lovelace/config/types";
+import type { LovelaceViewRawConfig } from "../../../data/lovelace/config/view";
+import { isStrategyView } from "../../../data/lovelace/config/view";
 
 export type LovelaceCardPath = [number, number] | [number, number, number];
 export type LovelaceContainerPath = [number] | [number, number];
@@ -47,14 +43,14 @@ export const getLovelaceContainerPath = (
   path: LovelaceCardPath
 ): LovelaceContainerPath => path.slice(0, -1) as LovelaceContainerPath;
 
-type FindLovelaceContainer = {
+interface FindLovelaceContainer {
   (config: LovelaceConfig, path: [number]): LovelaceViewRawConfig;
   (config: LovelaceConfig, path: [number, number]): LovelaceSectionRawConfig;
   (
     config: LovelaceConfig,
     path: LovelaceContainerPath
   ): LovelaceViewRawConfig | LovelaceSectionRawConfig;
-};
+}
 export const findLovelaceContainer: FindLovelaceContainer = (
   config: LovelaceConfig,
   path: LovelaceContainerPath
@@ -125,10 +121,10 @@ export const updateLovelaceContainer = (
   };
 };
 
-type LovelaceItemKeys = {
+interface LovelaceItemKeys {
   cards: LovelaceCardConfig[];
   badges: (Partial<LovelaceBadgeConfig> | string)[];
-};
+}
 
 export const updateLovelaceItems = <T extends keyof LovelaceItemKeys>(
   key: T,

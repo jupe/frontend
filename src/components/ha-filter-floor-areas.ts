@@ -1,13 +1,8 @@
+import "@material/mwc-list/mwc-list";
 import "@material/mwc-menu/mwc-menu-surface";
 import { mdiFilterVariantRemove, mdiTextureBox } from "@mdi/js";
-import {
-  CSSResultGroup,
-  LitElement,
-  PropertyValues,
-  css,
-  html,
-  nothing,
-} from "lit";
+import type { CSSResultGroup, PropertyValues } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { classMap } from "lit/directives/class-map";
 import { repeat } from "lit/directives/repeat";
@@ -15,7 +10,8 @@ import memoizeOne from "memoize-one";
 import { fireEvent } from "../common/dom/fire_event";
 import { computeRTL } from "../common/util/compute_rtl";
 import { getFloorAreaLookup } from "../data/floor_registry";
-import { RelatedResult, findRelated } from "../data/search";
+import type { RelatedResult } from "../data/search";
+import { findRelated } from "../data/search";
 import { haStyleScrollbar } from "../resources/styles";
 import type { HomeAssistant } from "../types";
 import "./ha-check-list-item";
@@ -23,6 +19,8 @@ import "./ha-floor-icon";
 import "./ha-icon";
 import "./ha-svg-icon";
 import "./ha-tree-indicator";
+import "./ha-icon-button";
+import "./ha-expansion-panel";
 
 @customElement("ha-filter-floor-areas")
 export class HaFilterFloorAreas extends LitElement {
@@ -117,7 +115,7 @@ export class HaFilterFloorAreas extends LitElement {
     `;
   }
 
-  private _renderArea(area, last: boolean = false) {
+  private _renderArea(area, last = false) {
     const hasFloor = !!area.floor_id;
     return html`
       <ha-check-list-item
@@ -253,7 +251,7 @@ export class HaFilterFloorAreas extends LitElement {
     }
 
     const results = await Promise.all(relatedPromises);
-    const items: Set<string> = new Set();
+    const items = new Set<string>();
     for (const result of results) {
       if (result[this.type!]) {
         result[this.type!]!.forEach((item) => items.add(item));

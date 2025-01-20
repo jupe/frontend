@@ -1,15 +1,9 @@
 import "@material/mwc-button/mwc-button";
 import "@material/mwc-formfield/mwc-formfield";
 import { mdiContentCopy } from "@mdi/js";
-import { HassEntity } from "home-assistant-js-websocket";
-import {
-  css,
-  CSSResultGroup,
-  html,
-  LitElement,
-  nothing,
-  PropertyValues,
-} from "lit";
+import type { HassEntity } from "home-assistant-js-websocket";
+import type { CSSResultGroup, PropertyValues } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { until } from "lit/directives/until";
 import memoizeOne from "memoize-one";
@@ -21,7 +15,7 @@ import { computeObjectId } from "../../../common/entity/compute_object_id";
 import { supportsFeature } from "../../../common/entity/supports-feature";
 import { formatNumber } from "../../../common/number/format_number";
 import { stringCompare } from "../../../common/string/compare";
-import {
+import type {
   LocalizeFunc,
   LocalizeKeys,
 } from "../../../common/translations/localize";
@@ -43,28 +37,30 @@ import "../../../components/ha-textfield";
 import {
   CAMERA_ORIENTATIONS,
   CAMERA_SUPPORT_STREAM,
-  CameraPreferences,
+  type CameraPreferences,
+  fetchCameraCapabilities,
   fetchCameraPrefs,
   STREAM_TYPE_HLS,
   updateCameraPrefs,
 } from "../../../data/camera";
-import { ConfigEntry, deleteConfigEntry } from "../../../data/config_entries";
+import type { ConfigEntry } from "../../../data/config_entries";
+import { deleteConfigEntry } from "../../../data/config_entries";
 import {
   createConfigFlow,
   handleConfigFlowStep,
 } from "../../../data/config_flow";
-import { DataEntryFlowStepCreateEntry } from "../../../data/data_entry_flow";
-import {
-  DeviceRegistryEntry,
-  updateDeviceRegistryEntry,
-} from "../../../data/device_registry";
-import {
+import type { DataEntryFlowStepCreateEntry } from "../../../data/data_entry_flow";
+import type { DeviceRegistryEntry } from "../../../data/device_registry";
+import { updateDeviceRegistryEntry } from "../../../data/device_registry";
+import type {
   AlarmControlPanelEntityOptions,
   EntityRegistryEntry,
   EntityRegistryEntryUpdateParams,
   ExtEntityRegistryEntry,
   LockEntityOptions,
   SensorEntityOptions,
+} from "../../../data/entity_registry";
+import {
   subscribeEntityRegistry,
   updateEntityRegistryEntry,
 } from "../../../data/entity_registry";
@@ -82,10 +78,8 @@ import {
   getSensorDeviceClassConvertibleUnits,
   getSensorNumericDeviceClasses,
 } from "../../../data/sensor";
-import {
-  getWeatherConvertibleUnits,
-  WeatherUnits,
-} from "../../../data/weather";
+import type { WeatherUnits } from "../../../data/weather";
+import { getWeatherConvertibleUnits } from "../../../data/weather";
 import { showOptionsFlowDialog } from "../../../dialogs/config-flow/show-dialog-options-flow";
 import {
   showAlertDialog,
@@ -97,6 +91,7 @@ import { haStyle } from "../../../resources/styles";
 import type { HomeAssistant } from "../../../types";
 import { showToast } from "../../../util/toast";
 import { showDeviceRegistryDetailDialog } from "../devices/device-registry-detail/show-dialog-device-registry-detail";
+import { autoCaseNoun } from "../../../common/translations/auto_case_noun";
 
 const OVERRIDE_DEVICE_CLASSES = {
   cover: [
@@ -145,9 +140,9 @@ export class EntityRegistrySettingsEditor extends LitElement {
 
   @property({ type: Object }) public entry!: ExtEntityRegistryEntry;
 
-  @property({ type: Boolean }) public hideName = false;
+  @property({ type: Boolean, attribute: "hide-name" }) public hideName = false;
 
-  @property({ type: Boolean }) public hideIcon = false;
+  @property({ type: Boolean, attribute: "hide-icon" }) public hideIcon = false;
 
   @property({ type: Boolean }) public disabled = false;
 
@@ -236,13 +231,7 @@ export class EntityRegistrySettingsEditor extends LitElement {
     if (domain === "camera" && isComponentLoaded(this.hass, "stream")) {
       const stateObj: HassEntity | undefined =
         this.hass.states[this.entry.entity_id];
-      if (
-        stateObj &&
-        supportsFeature(stateObj, CAMERA_SUPPORT_STREAM) &&
-        // The stream component for HLS streams supports a server-side pre-load
-        // option that client initiated WebRTC streams do not
-        stateObj.attributes.frontend_stream_type === STREAM_TYPE_HLS
-      ) {
+      if (stateObj && supportsFeature(stateObj, CAMERA_SUPPORT_STREAM)) {
         this._fetchCameraPrefs();
       }
     }
@@ -291,7 +280,7 @@ export class EntityRegistrySettingsEditor extends LitElement {
     }
   }
 
-  private precisionLabel(precision?: number, stateValue?: string) {
+  private _precisionLabel(precision?: number, stateValue?: string) {
     const stateValueNumber = Number(stateValue);
     const value = !isNaN(stateValueNumber) ? stateValue! : 0;
     return formatNumber(value, this.hass.locale, {
@@ -653,7 +642,7 @@ export class EntityRegistrySettingsEditor extends LitElement {
                 >${this.hass.localize(
                   "ui.dialogs.entity_registry.editor.precision_default",
                   {
-                    value: this.precisionLabel(
+                    value: this._precisionLabel(
                       defaultPrecision,
                       stateObj?.state
                     ),
@@ -663,7 +652,7 @@ export class EntityRegistrySettingsEditor extends LitElement {
               ${PRECISIONS.map(
                 (precision) => html`
                   <ha-list-item .value=${precision.toString()}>
-                    ${this.precisionLabel(precision, stateObj?.state)}
+                    ${this._precisionLabel(precision, stateObj?.state)}
                   </ha-list-item>
                 `
               )}
@@ -1147,10 +1136,10 @@ export class EntityRegistrySettingsEditor extends LitElement {
           text: this.hass!.localize(
             "ui.dialogs.entity_registry.editor.switch_as_x_confirm",
             {
-              domain: domainToName(
-                this.hass.localize,
-                this._switchAsDomain
-              ).toLowerCase(),
+              domain: autoCaseNoun(
+                domainToName(this.hass.localize, this._switchAsDomain),
+                this.hass.locale.language
+              ),
             }
           ),
         })
@@ -1172,7 +1161,7 @@ export class EntityRegistrySettingsEditor extends LitElement {
             );
             showMoreInfoDialog(parent, { entityId: entry.entity_id });
             close = false;
-          } catch (err) {
+          } catch (_err) {
             // ignore
           }
         }
@@ -1189,23 +1178,23 @@ export class EntityRegistrySettingsEditor extends LitElement {
               ? this.hass!.localize(
                   "ui.dialogs.entity_registry.editor.switch_as_x_remove_confirm",
                   {
-                    domain: domainToName(
-                      this.hass.localize,
-                      domain
-                    ).toLowerCase(),
+                    domain: autoCaseNoun(
+                      domainToName(this.hass.localize, domain),
+                      this.hass.locale.language
+                    ),
                   }
                 )
               : this.hass!.localize(
                   "ui.dialogs.entity_registry.editor.switch_as_x_change_confirm",
                   {
-                    domain_1: domainToName(
-                      this.hass.localize,
-                      domain
-                    ).toLowerCase(),
-                    domain_2: domainToName(
-                      this.hass.localize,
-                      this._switchAsDomain
-                    ).toLowerCase(),
+                    domain_1: autoCaseNoun(
+                      domainToName(this.hass.localize, domain),
+                      this.hass.locale.language
+                    ),
+                    domain_2: autoCaseNoun(
+                      domainToName(this.hass.localize, this._switchAsDomain),
+                      this.hass.locale.language
+                    ),
                   }
                 ),
         })
@@ -1238,7 +1227,7 @@ export class EntityRegistrySettingsEditor extends LitElement {
               );
               showMoreInfoDialog(parent, { entityId: entry.entity_id });
               close = false;
-            } catch (err) {
+            } catch (_err) {
               // ignore
             }
           }
@@ -1396,6 +1385,19 @@ export class EntityRegistrySettingsEditor extends LitElement {
   }
 
   private async _fetchCameraPrefs() {
+    const capabilities = await fetchCameraCapabilities(
+      this.hass,
+      this.entry.entity_id
+    );
+
+    // The stream component for HLS streams supports a server-side pre-load
+    // option that client initiated WebRTC streams do not
+
+    if (!capabilities.frontend_stream_types.includes(STREAM_TYPE_HLS)) {
+      this._cameraPrefs = undefined;
+      return;
+    }
+
     this._cameraPrefs = await fetchCameraPrefs(this.hass, this.entry.entity_id);
   }
 

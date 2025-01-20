@@ -1,12 +1,6 @@
 import "./ha-form";
-import {
-  css,
-  CSSResultGroup,
-  html,
-  LitElement,
-  PropertyValues,
-  TemplateResult,
-} from "lit";
+import type { PropertyValues, TemplateResult } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators";
 import type {
   HaFormGridSchema,
@@ -76,22 +70,20 @@ export class HaFormGrid extends LitElement implements HaFormElement {
     `;
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      :host {
-        display: grid !important;
-        grid-template-columns: repeat(
-          var(--form-grid-column-count, auto-fit),
-          minmax(var(--form-grid-min-width, 200px), 1fr)
-        );
-        grid-column-gap: 8px;
-        grid-row-gap: 24px;
-      }
-      :host > ha-form {
-        display: block;
-      }
-    `;
-  }
+  static styles = css`
+    :host {
+      display: grid !important;
+      grid-template-columns: repeat(
+        var(--form-grid-column-count, auto-fit),
+        minmax(var(--form-grid-min-width, 200px), 1fr)
+      );
+      grid-column-gap: 8px;
+      grid-row-gap: 24px;
+    }
+    :host > ha-form {
+      display: block;
+    }
+  `;
 }
 
 declare global {

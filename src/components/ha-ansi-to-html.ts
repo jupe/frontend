@@ -1,10 +1,9 @@
 import {
   css,
-  CSSResultGroup,
   html,
   LitElement,
-  PropertyValues,
-  TemplateResult,
+  type PropertyValues,
+  type TemplateResult,
 } from "lit";
 import {
   customElement,
@@ -12,6 +11,7 @@ import {
   query,
   state as litState,
 } from "lit/decorators";
+import { classMap } from "lit/directives/class-map";
 
 interface State {
   bold: boolean;
@@ -26,12 +26,15 @@ interface State {
 export class HaAnsiToHtml extends LitElement {
   @property() public content!: string;
 
+  @property({ type: Boolean, attribute: "wrap-disabled" }) public wrapDisabled =
+    false;
+
   @query("pre") private _pre?: HTMLPreElement;
 
   @litState() private _filter = "";
 
-  protected render(): TemplateResult | void {
-    return html`<pre></pre>`;
+  protected render(): TemplateResult {
+    return html`<pre class=${classMap({ wrap: !this.wrapDisabled })}></pre>`;
   }
 
   protected firstUpdated(_changedProperties: PropertyValues): void {
@@ -43,81 +46,81 @@ export class HaAnsiToHtml extends LitElement {
     }
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      pre {
-        overflow-x: auto;
-        white-space: pre-wrap;
-        overflow-wrap: break-word;
-        margin: 0;
-      }
-      .bold {
-        font-weight: bold;
-      }
-      .italic {
-        font-style: italic;
-      }
-      .underline {
-        text-decoration: underline;
-      }
-      .strikethrough {
-        text-decoration: line-through;
-      }
-      .underline.strikethrough {
-        text-decoration: underline line-through;
-      }
-      .fg-red {
-        color: var(--error-color);
-      }
-      .fg-green {
-        color: var(--success-color);
-      }
-      .fg-yellow {
-        color: var(--warning-color);
-      }
-      .fg-blue {
-        color: var(--info-color);
-      }
-      .fg-magenta {
-        color: rgb(118, 38, 113);
-      }
-      .fg-cyan {
-        color: rgb(44, 181, 233);
-      }
-      .fg-white {
-        color: rgb(204, 204, 204);
-      }
-      .bg-black {
-        background-color: rgb(0, 0, 0);
-      }
-      .bg-red {
-        background-color: var(--error-color);
-      }
-      .bg-green {
-        background-color: var(--success-color);
-      }
-      .bg-yellow {
-        background-color: var(--warning-color);
-      }
-      .bg-blue {
-        background-color: var(--info-color);
-      }
-      .bg-magenta {
-        background-color: rgb(118, 38, 113);
-      }
-      .bg-cyan {
-        background-color: rgb(44, 181, 233);
-      }
-      .bg-white {
-        background-color: rgb(204, 204, 204);
-      }
+  static styles = css`
+    pre {
+      overflow-x: auto;
+      margin: 0;
+    }
+    pre.wrap {
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+    }
+    .bold {
+      font-weight: bold;
+    }
+    .italic {
+      font-style: italic;
+    }
+    .underline {
+      text-decoration: underline;
+    }
+    .strikethrough {
+      text-decoration: line-through;
+    }
+    .underline.strikethrough {
+      text-decoration: underline line-through;
+    }
+    .fg-red {
+      color: var(--error-color);
+    }
+    .fg-green {
+      color: var(--success-color);
+    }
+    .fg-yellow {
+      color: var(--warning-color);
+    }
+    .fg-blue {
+      color: var(--info-color);
+    }
+    .fg-magenta {
+      color: rgb(118, 38, 113);
+    }
+    .fg-cyan {
+      color: rgb(44, 181, 233);
+    }
+    .fg-white {
+      color: rgb(204, 204, 204);
+    }
+    .bg-black {
+      background-color: rgb(0, 0, 0);
+    }
+    .bg-red {
+      background-color: var(--error-color);
+    }
+    .bg-green {
+      background-color: var(--success-color);
+    }
+    .bg-yellow {
+      background-color: var(--warning-color);
+    }
+    .bg-blue {
+      background-color: var(--info-color);
+    }
+    .bg-magenta {
+      background-color: rgb(118, 38, 113);
+    }
+    .bg-cyan {
+      background-color: rgb(44, 181, 233);
+    }
+    .bg-white {
+      background-color: rgb(204, 204, 204);
+    }
 
-      ::highlight(search-results) {
-        background-color: var(--primary-color);
-        color: var(--text-primary-color);
-      }
-    `;
-  }
+    ::highlight(search-results) {
+      background-color: var(--primary-color);
+      color: var(--text-primary-color);
+    }
+  `;
 
   /**
    * add new lines to the log
@@ -177,7 +180,7 @@ export class HaAnsiToHtml extends LitElement {
 
     /* eslint-disable no-cond-assign */
     let match;
-    // eslint-disable-next-line
+
     while ((match = re.exec(line)) !== null) {
       const j = match!.index;
       const substring = line.substring(i, j);

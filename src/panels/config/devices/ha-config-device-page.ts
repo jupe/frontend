@@ -10,14 +10,8 @@ import {
   mdiPencil,
   mdiPlusCircle,
 } from "@mdi/js";
-import {
-  CSSResultGroup,
-  LitElement,
-  TemplateResult,
-  css,
-  html,
-  nothing,
-} from "lit";
+import type { CSSResultGroup, TemplateResult } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { ifDefined } from "lit/directives/if-defined";
 import memoizeOne from "memoize-one";
@@ -37,34 +31,39 @@ import "../../../components/ha-icon-next";
 import "../../../components/ha-svg-icon";
 import "../../../components/ha-expansion-panel";
 import { getSignedPath } from "../../../data/auth";
-import {
+import type {
   ConfigEntry,
   DisableConfigEntryResult,
+} from "../../../data/config_entries";
+import {
   disableConfigEntry,
   sortConfigEntries,
 } from "../../../data/config_entries";
 import { fullEntitiesContext } from "../../../data/context";
+import type { DeviceRegistryEntry } from "../../../data/device_registry";
 import {
-  DeviceRegistryEntry,
   computeDeviceName,
   removeConfigEntryFromDevice,
   updateDeviceRegistryEntry,
 } from "../../../data/device_registry";
+import type { DiagnosticInfo } from "../../../data/diagnostics";
 import {
-  DiagnosticInfo,
   fetchDiagnosticHandler,
   getConfigEntryDiagnosticsDownloadUrl,
   getDeviceDiagnosticsDownloadUrl,
 } from "../../../data/diagnostics";
+import type { EntityRegistryEntry } from "../../../data/entity_registry";
 import {
-  EntityRegistryEntry,
   findBatteryChargingEntity,
   findBatteryEntity,
   updateEntityRegistryEntry,
 } from "../../../data/entity_registry";
-import { IntegrationManifest, domainToName } from "../../../data/integration";
-import { SceneEntities, showSceneEditor } from "../../../data/scene";
-import { RelatedResult, findRelated } from "../../../data/search";
+import type { IntegrationManifest } from "../../../data/integration";
+import { domainToName } from "../../../data/integration";
+import type { SceneEntities } from "../../../data/scene";
+import { showSceneEditor } from "../../../data/scene";
+import type { RelatedResult } from "../../../data/search";
+import { findRelated } from "../../../data/search";
 import {
   showAlertDialog,
   showConfirmationDialog,
@@ -114,13 +113,13 @@ export class HaConfigDevicePage extends LitElement {
 
   @property({ attribute: false }) public manifests!: IntegrationManifest[];
 
-  @property() public deviceId!: string;
+  @property({ attribute: false }) public deviceId!: string;
 
   @property({ type: Boolean, reflect: true }) public narrow = false;
 
-  @property({ type: Boolean }) public isWide = false;
+  @property({ attribute: "is-wide", type: Boolean }) public isWide = false;
 
-  @property({ type: Boolean }) public showAdvanced = false;
+  @property({ attribute: false }) public showAdvanced = false;
 
   @state() private _related?: RelatedResult;
 
@@ -145,11 +144,11 @@ export class HaConfigDevicePage extends LitElement {
       entries: ConfigEntry[],
       manifests: IntegrationManifest[]
     ): ConfigEntry[] => {
-      const entryLookup: { [entryId: string]: ConfigEntry } = {};
+      const entryLookup: Record<string, ConfigEntry> = {};
       for (const entry of entries) {
         entryLookup[entry.entry_id] = entry;
       }
-      const manifestLookup: { [domain: string]: IntegrationManifest } = {};
+      const manifestLookup: Record<string, IntegrationManifest> = {};
       for (const manifest of manifests) {
         manifestLookup[manifest.domain] = manifest;
       }
@@ -1082,7 +1081,9 @@ export class HaConfigDevicePage extends LitElement {
     ) {
       deviceActions.push({
         action: this._voiceAssistantSetup,
-        label: "Set up voice assistant",
+        label: this.hass.localize(
+          "ui.panel.config.devices.set_up_voice_assistant"
+        ),
         icon: mdiMicrophone,
       });
     }
@@ -1643,6 +1644,8 @@ export class HaConfigDevicePage extends LitElement {
           display: block;
           width: 18px;
           height: 18px;
+          margin-inline-start: 8px;
+          margin-inline-end: initial;
         }
 
         ha-svg-icon[slot="meta"] {

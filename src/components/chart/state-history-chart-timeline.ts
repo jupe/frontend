@@ -1,19 +1,16 @@
 import type { ChartData, ChartDataset, ChartOptions } from "chart.js";
 import { getRelativePosition } from "chart.js/helpers";
-import { css, CSSResultGroup, html, LitElement, PropertyValues } from "lit";
-import { customElement, property, query, state } from "lit/decorators";
+import type { PropertyValues } from "lit";
+import { css, html, LitElement } from "lit";
+import { customElement, property, state } from "lit/decorators";
 import { formatDateTimeWithSeconds } from "../../common/datetime/format_date_time";
 import millisecondsToDuration from "../../common/datetime/milliseconds_to_duration";
 import { fireEvent } from "../../common/dom/fire_event";
 import { numberFormatToLocale } from "../../common/number/format_number";
 import { computeRTL } from "../../common/util/compute_rtl";
-import { TimelineEntity } from "../../data/history";
-import { HomeAssistant } from "../../types";
-import {
-  ChartResizeOptions,
-  HaChartBase,
-  MIN_TIME_BETWEEN_UPDATES,
-} from "./ha-chart-base";
+import type { TimelineEntity } from "../../data/history";
+import type { HomeAssistant } from "../../types";
+import { MIN_TIME_BETWEEN_UPDATES } from "./ha-chart-base";
 import type { TimeLineData } from "./timeline-chart/const";
 import { computeTimelineColor } from "./timeline-chart/timeline-color";
 import { clickIsTouch } from "./click_is_touch";
@@ -32,9 +29,10 @@ export class StateHistoryChartTimeline extends LitElement {
 
   @property() public identifier?: string;
 
-  @property({ type: Boolean }) public showNames = true;
+  @property({ attribute: "show-names", type: Boolean }) public showNames = true;
 
-  @property({ type: Boolean }) public clickForMoreInfo = true;
+  @property({ attribute: "click-for-more-info", type: Boolean })
+  public clickForMoreInfo = true;
 
   @property({ type: Boolean }) public chunked = false;
 
@@ -42,9 +40,9 @@ export class StateHistoryChartTimeline extends LitElement {
 
   @property({ attribute: false }) public endTime!: Date;
 
-  @property({ type: Number }) public paddingYAxis = 0;
+  @property({ attribute: false, type: Number }) public paddingYAxis = 0;
 
-  @property({ type: Number }) public chartIndex?;
+  @property({ attribute: false, type: Number }) public chartIndex?;
 
   @state() private _chartData?: ChartData<"timeline">;
 
@@ -53,12 +51,6 @@ export class StateHistoryChartTimeline extends LitElement {
   @state() private _yWidth = 0;
 
   private _chartTime: Date = new Date();
-
-  @query("ha-chart-base") private _chart?: HaChartBase;
-
-  public resize = (options?: ChartResizeOptions): void => {
-    this._chart?.resize(options);
-  };
 
   protected render() {
     return html`
@@ -104,10 +96,9 @@ export class StateHistoryChartTimeline extends LitElement {
     this._chartOptions = {
       maintainAspectRatio: false,
       parsing: false,
-      animation: false,
       scales: {
         x: {
-          type: "timeline",
+          type: "time",
           position: "bottom",
           adapters: {
             date: {
@@ -328,13 +319,11 @@ export class StateHistoryChartTimeline extends LitElement {
     };
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      ha-chart-base {
-        --chart-max-height: none;
-      }
-    `;
-  }
+  static styles = css`
+    ha-chart-base {
+      --chart-max-height: none;
+    }
+  `;
 }
 
 declare global {

@@ -1,5 +1,5 @@
 import { ensureArray } from "../common/array/ensure-array";
-import { HomeAssistant } from "../types";
+import type { HomeAssistant } from "../types";
 
 export const enum ConversationEntityFeature {
   CONTROL = 1,
@@ -13,11 +13,7 @@ interface IntentTarget {
 
 interface IntentResultBase {
   language: string;
-  speech:
-    | {
-        [SpeechType in "plain" | "ssml"]: { extra_data: any; speech: string };
-      }
-    | null;
+  speech: Record<"plain" | "ssml", { extra_data: any; speech: string }> | null;
 }
 
 interface IntentResultActionDone extends IntentResultBase {

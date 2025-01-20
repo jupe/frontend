@@ -1,5 +1,5 @@
 import { mdiContentCopy, mdiEye, mdiEyeOff, mdiHelpCircle } from "@mdi/js";
-import { CSSResultGroup, LitElement, css, html, nothing } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../../../common/dom/fire_event";
 import { copyToClipboard } from "../../../../common/util/copy-clipboard";
@@ -11,11 +11,12 @@ import "../../../../components/ha-formfield";
 import "../../../../components/ha-radio";
 import "../../../../components/ha-settings-row";
 import "../../../../components/ha-switch";
-// eslint-disable-next-line
+import "../../../../components/ha-textfield";
+
 import { formatDate } from "../../../../common/datetime/format_date";
 import type { HaSwitch } from "../../../../components/ha-switch";
+import type { CloudStatusLoggedIn } from "../../../../data/cloud";
 import {
-  CloudStatusLoggedIn,
   connectCloudRemote,
   disconnectCloudRemote,
   updateCloudPref,
@@ -23,6 +24,7 @@ import {
 import type { HomeAssistant } from "../../../../types";
 import { showToast } from "../../../../util/toast";
 import { showCloudCertificateDialog } from "../dialog-cloud-certificate/show-dialog-cloud-certificate";
+import { obfuscateUrl } from "../../../../util/url";
 
 @customElement("cloud-remote-pref")
 export class CloudRemotePref extends LitElement {
@@ -142,7 +144,7 @@ export class CloudRemotePref extends LitElement {
               <ha-textfield
                 .value=${this._unmaskedUrl
                   ? `https://${remote_domain}`
-                  : "https://•••••••••••••••••.ui.nabu.casa"}
+                  : obfuscateUrl(`https://${remote_domain}`)}
                 readonly
                 .suffix=${
                   // reserve some space for the icon.
@@ -153,7 +155,7 @@ export class CloudRemotePref extends LitElement {
                 class="toggle-unmasked-url"
                 toggles
                 .label=${this.hass.localize(
-                  `ui.panel.config.cloud.account.remote.${this._unmaskedUrl ? "hide" : "show"}_url`
+                  `ui.panel.config.common.${this._unmaskedUrl ? "hide" : "show"}_url`
                 )}
                 @click=${this._toggleUnmaskedUrl}
                 .path=${this._unmaskedUrl ? mdiEyeOff : mdiEye}
@@ -165,9 +167,7 @@ export class CloudRemotePref extends LitElement {
               unelevated
             >
               <ha-svg-icon slot="icon" .path=${mdiContentCopy}></ha-svg-icon>
-              ${this.hass.localize(
-                "ui.panel.config.cloud.account.remote.copy_link"
-              )}
+              ${this.hass.localize("ui.panel.config.common.copy_link")}
             </ha-button>
           </div>
 
@@ -249,7 +249,7 @@ export class CloudRemotePref extends LitElement {
       }
       fireEvent(this, "ha-refresh-cloud-status");
     } catch (err: any) {
-      alert(err.message);
+      showToast(this, { message: err.message });
       toggle.checked = !toggle.checked;
     }
   }
@@ -263,7 +263,7 @@ export class CloudRemotePref extends LitElement {
       });
       fireEvent(this, "ha-refresh-cloud-status");
     } catch (err: any) {
-      alert(err.message);
+      showToast(this, { message: err.message });
       toggle.checked = !toggle.checked;
     }
   }
@@ -276,98 +276,96 @@ export class CloudRemotePref extends LitElement {
     });
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      .preparing {
-        padding: 0 16px 16px;
-      }
-      a {
-        color: var(--primary-color);
-      }
-      .header-actions {
-        position: absolute;
-        right: 16px;
-        inset-inline-end: 16px;
-        inset-inline-start: initial;
-        top: 24px;
-        display: flex;
-        flex-direction: row;
-      }
-      .header-actions .icon-link {
-        margin-top: -16px;
-        margin-right: 8px;
-        margin-inline-end: 8px;
-        margin-inline-start: initial;
-        direction: var(--direction);
-        color: var(--secondary-text-color);
-      }
-      .warning {
-        font-weight: bold;
-        margin-bottom: 1em;
-      }
-      .break-word {
-        overflow-wrap: break-word;
-      }
-      .connection-status {
-        position: absolute;
-        right: 24px;
-        top: 24px;
-        inset-inline-end: 24px;
-        inset-inline-start: initial;
-      }
-      .card-actions {
-        display: flex;
-      }
-      .card-actions a {
-        text-decoration: none;
-      }
-      ha-expansion-panel {
-        margin-top: 16px;
-      }
-      ha-settings-row {
-        padding: 0;
-        border-top: none !important;
-      }
-      ha-expansion-panel {
-        --expansion-panel-content-padding: 0 16px;
-        --expansion-panel-summary-padding: 0 16px;
-      }
-      ha-alert {
-        display: block;
-        margin-bottom: 16px;
-      }
-      .url-container {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 8px;
-      }
-      .textfield-container {
-        position: relative;
-        flex: 1;
-      }
-      .textfield-container ha-textfield {
-        display: block;
-      }
-      .toggle-unmasked-url {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        inset-inline-start: initial;
-        inset-inline-end: 8px;
-        --mdc-icon-button-size: 40px;
-        --mdc-icon-size: 20px;
-        color: var(--secondary-text-color);
-        direction: var(--direction);
-      }
-      hr {
-        border: none;
-        height: 1px;
-        background-color: var(--divider-color);
-        margin: 8px 0;
-      }
-    `;
-  }
+  static styles = css`
+    .preparing {
+      padding: 0 16px 16px;
+    }
+    a {
+      color: var(--primary-color);
+    }
+    .header-actions {
+      position: absolute;
+      right: 16px;
+      inset-inline-end: 16px;
+      inset-inline-start: initial;
+      top: 24px;
+      display: flex;
+      flex-direction: row;
+    }
+    .header-actions .icon-link {
+      margin-top: -16px;
+      margin-right: 8px;
+      margin-inline-end: 8px;
+      margin-inline-start: initial;
+      direction: var(--direction);
+      color: var(--secondary-text-color);
+    }
+    .warning {
+      font-weight: bold;
+      margin-bottom: 1em;
+    }
+    .break-word {
+      overflow-wrap: break-word;
+    }
+    .connection-status {
+      position: absolute;
+      right: 24px;
+      top: 24px;
+      inset-inline-end: 24px;
+      inset-inline-start: initial;
+    }
+    .card-actions {
+      display: flex;
+    }
+    .card-actions a {
+      text-decoration: none;
+    }
+    ha-expansion-panel {
+      margin-top: 16px;
+    }
+    ha-settings-row {
+      padding: 0;
+      border-top: none !important;
+    }
+    ha-expansion-panel {
+      --expansion-panel-content-padding: 0 16px;
+      --expansion-panel-summary-padding: 0 16px;
+    }
+    ha-alert {
+      display: block;
+      margin-bottom: 16px;
+    }
+    .url-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .textfield-container {
+      position: relative;
+      flex: 1;
+    }
+    .textfield-container ha-textfield {
+      display: block;
+    }
+    .toggle-unmasked-url {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      inset-inline-start: initial;
+      inset-inline-end: 8px;
+      --mdc-icon-button-size: 40px;
+      --mdc-icon-size: 20px;
+      color: var(--secondary-text-color);
+      direction: var(--direction);
+    }
+    hr {
+      border: none;
+      height: 1px;
+      background-color: var(--divider-color);
+      margin: 8px 0;
+    }
+  `;
 }
 
 declare global {

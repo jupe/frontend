@@ -1,19 +1,13 @@
-import {
+import type {
   ChartData,
   ChartDataset,
   ChartOptions,
   ScatterDataPoint,
 } from "chart.js";
 import { endOfToday, isToday, startOfToday } from "date-fns";
-import { HassConfig, UnsubscribeFunc } from "home-assistant-js-websocket";
-import {
-  css,
-  CSSResultGroup,
-  html,
-  LitElement,
-  nothing,
-  PropertyValues,
-} from "lit";
+import type { HassConfig, UnsubscribeFunc } from "home-assistant-js-websocket";
+import type { PropertyValues } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { classMap } from "lit/directives/class-map";
 import memoizeOne from "memoize-one";
@@ -21,17 +15,15 @@ import { getEnergyColor } from "./common/color";
 import { formatNumber } from "../../../../common/number/format_number";
 import "../../../../components/chart/ha-chart-base";
 import "../../../../components/ha-card";
-import { EnergyData, getEnergyDataCollection } from "../../../../data/energy";
-import {
-  getStatisticLabel,
-  Statistics,
-  StatisticsMetaData,
-} from "../../../../data/recorder";
-import { FrontendLocaleData } from "../../../../data/translation";
+import type { EnergyData } from "../../../../data/energy";
+import { getEnergyDataCollection } from "../../../../data/energy";
+import type { Statistics, StatisticsMetaData } from "../../../../data/recorder";
+import { getStatisticLabel } from "../../../../data/recorder";
+import type { FrontendLocaleData } from "../../../../data/translation";
 import { SubscribeMixin } from "../../../../mixins/subscribe-mixin";
-import { HomeAssistant } from "../../../../types";
-import { LovelaceCard } from "../../types";
-import { EnergyUsageGraphCardConfig } from "../types";
+import type { HomeAssistant } from "../../../../types";
+import type { LovelaceCard } from "../../types";
+import type { EnergyUsageGraphCardConfig } from "../types";
 import { hasConfigChanged } from "../../common/has-changed";
 import { getCommonOptions } from "./common/energy-chart-options";
 
@@ -360,20 +352,20 @@ export class HuiEnergyUsageGraphCard
     const data: ChartDataset<"bar", ScatterDataPoint[]>[] = [];
 
     const combinedData: {
-      to_grid?: { [statId: string]: { [start: number]: number } };
-      to_battery?: { [statId: string]: { [start: number]: number } };
-      from_grid?: { [statId: string]: { [start: number]: number } };
-      used_grid?: { [statId: string]: { [start: number]: number } };
-      used_solar?: { [statId: string]: { [start: number]: number } };
-      used_battery?: { [statId: string]: { [start: number]: number } };
+      to_grid?: Record<string, Record<number, number>>;
+      to_battery?: Record<string, Record<number, number>>;
+      from_grid?: Record<string, Record<number, number>>;
+      used_grid?: Record<string, Record<number, number>>;
+      used_solar?: Record<string, Record<number, number>>;
+      used_battery?: Record<string, Record<number, number>>;
     } = {};
 
     const summedData: {
-      to_grid?: { [start: number]: number };
-      from_grid?: { [start: number]: number };
-      to_battery?: { [start: number]: number };
-      from_battery?: { [start: number]: number };
-      solar?: { [start: number]: number };
+      to_grid?: Record<number, number>;
+      from_grid?: Record<number, number>;
+      to_battery?: Record<number, number>;
+      from_battery?: Record<number, number>;
+      solar?: Record<number, number>;
     } = {};
 
     let pointEndTime;
@@ -386,8 +378,8 @@ export class HuiEnergyUsageGraphCard
         "from_battery",
       ].includes(key);
       const add = !["solar", "from_battery"].includes(key);
-      const totalStats: { [start: number]: number } = {};
-      const sets: { [statId: string]: { [start: number]: number } } = {};
+      const totalStats: Record<number, number> = {};
+      const sets: Record<string, Record<number, number>> = {};
       statIds!.forEach((id) => {
         const stats = statistics[id];
         if (!stats) {
@@ -560,37 +552,35 @@ export class HuiEnergyUsageGraphCard
     return data;
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      ha-card {
-        height: 100%;
-      }
-      .card-header {
-        padding-bottom: 0;
-      }
-      .content {
-        padding: 16px;
-      }
-      .has-header {
-        padding-top: 0;
-      }
-      .no-data {
-        position: absolute;
-        height: 100%;
-        top: 0;
-        left: 0;
-        right: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 20%;
-        margin-left: 32px;
-        margin-inline-start: 32px;
-        margin-inline-end: initial;
-        box-sizing: border-box;
-      }
-    `;
-  }
+  static styles = css`
+    ha-card {
+      height: 100%;
+    }
+    .card-header {
+      padding-bottom: 0;
+    }
+    .content {
+      padding: 16px;
+    }
+    .has-header {
+      padding-top: 0;
+    }
+    .no-data {
+      position: absolute;
+      height: 100%;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20%;
+      margin-left: 32px;
+      margin-inline-start: 32px;
+      margin-inline-end: initial;
+      box-sizing: border-box;
+    }
+  `;
 }
 
 declare global {

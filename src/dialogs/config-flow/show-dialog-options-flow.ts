@@ -1,5 +1,5 @@
 import { html } from "lit";
-import { ConfigEntry } from "../../data/config_entries";
+import type { ConfigEntry } from "../../data/config_entries";
 import { domainToName } from "../../data/integration";
 import {
   createOptionsFlow,
@@ -7,8 +7,8 @@ import {
   fetchOptionsFlow,
   handleOptionsFlowStep,
 } from "../../data/options_flow";
+import type { DataEntryFlowDialogParams } from "./show-dialog-data-entry-flow";
 import {
-  DataEntryFlowDialogParams,
   loadDataEntryFlowDialog,
   showFlowDialog,
 } from "./show-dialog-data-entry-flow";
@@ -61,7 +61,7 @@ export const showOptionsFlowDialog = (
           ? html`
               <ha-markdown
                 breaks
-                allowsvg
+                allow-svg
                 .content=${description}
               ></ha-markdown>
             `
@@ -85,7 +85,7 @@ export const showOptionsFlowDialog = (
         return description
           ? html`
               <ha-markdown
-                allowsvg
+                allow-svg
                 breaks
                 .content=${description}
               ></ha-markdown>
@@ -183,7 +183,7 @@ export const showOptionsFlowDialog = (
         return description
           ? html`
               <ha-markdown
-                allowsvg
+                allow-svg
                 breaks
                 .content=${description}
               ></ha-markdown>
@@ -207,7 +207,7 @@ export const showOptionsFlowDialog = (
         return description
           ? html`
               <ha-markdown
-                allowsvg
+                allow-svg
                 breaks
                 .content=${description}
               ></ha-markdown>

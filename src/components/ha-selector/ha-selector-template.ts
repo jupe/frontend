@@ -1,7 +1,7 @@
 import { css, html, nothing, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../common/dom/fire_event";
-import { HomeAssistant } from "../../types";
+import type { HomeAssistant } from "../../types";
 import { documentationUrl } from "../../util/documentation-url";
 import "../ha-code-editor";
 import "../ha-input-helper-text";
@@ -77,13 +77,11 @@ export class HaTemplateSelector extends LitElement {
     fireEvent(this, "value-changed", { value });
   }
 
-  static get styles() {
-    return css`
-      p {
-        margin-top: 0;
-      }
-    `;
-  }
+  static styles = css`
+    p {
+      margin-top: 0;
+    }
+  `;
 }
 
 declare global {

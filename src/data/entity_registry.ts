@@ -1,15 +1,14 @@
-import { Connection, createCollection } from "home-assistant-js-websocket";
-import { Store } from "home-assistant-js-websocket/dist/store";
+import type { Connection } from "home-assistant-js-websocket";
+import { createCollection } from "home-assistant-js-websocket";
+import type { Store } from "home-assistant-js-websocket/dist/store";
 import memoizeOne from "memoize-one";
 import { computeStateName } from "../common/entity/compute_state_name";
 import { caseInsensitiveStringCompare } from "../common/string/compare";
 import { debounce } from "../common/util/debounce";
-import { HomeAssistant } from "../types";
-import { LightColor } from "./light";
+import type { HomeAssistant } from "../types";
+import type { LightColor } from "./light";
 import { computeDomain } from "../common/entity/compute_domain";
-import { RegistryEntry } from "./registry";
-
-export { subscribeEntityRegistryDisplay } from "./ws-entity_registry_display";
+import type { RegistryEntry } from "./registry";
 
 type EntityCategory = "config" | "diagnostic";
 
@@ -62,7 +61,7 @@ export interface EntityRegistryEntry extends RegistryEntry {
   unique_id: string;
   translation_key?: string;
   options: EntityRegistryOptions | null;
-  categories: { [scope: string]: string };
+  categories: Record<string, string>;
 }
 
 export interface ExtEntityRegistryEntry extends EntityRegistryEntry {
@@ -145,7 +144,7 @@ export interface EntityRegistryEntryUpdateParams {
     | LightEntityOptions;
   aliases?: string[];
   labels?: string[];
-  categories?: { [scope: string]: string | null };
+  categories?: Record<string, string | null>;
 }
 
 const batteryPriorities = ["sensor", "binary_sensor"];

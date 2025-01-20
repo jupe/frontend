@@ -1,9 +1,9 @@
 import { LitElement, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../../../../common/dom/fire_event";
-import { HassDialog } from "../../../../../dialogs/make-dialog-manager";
-import { HomeAssistant } from "../../../../../types";
-import { DialogThreadDatasetParams } from "./show-dialog-thread-dataset";
+import type { HassDialog } from "../../../../../dialogs/make-dialog-manager";
+import type { HomeAssistant } from "../../../../../types";
+import type { DialogThreadDatasetParams } from "./show-dialog-thread-dataset";
 import { createCloseHeading } from "../../../../../components/ha-dialog";
 
 @customElement("ha-dialog-thread-dataset")
@@ -18,9 +18,10 @@ class DialogThreadDataset extends LitElement implements HassDialog {
     this._params = params;
   }
 
-  public closeDialog(): void {
+  public closeDialog() {
     this._params = undefined;
     fireEvent(this, "dialog-closed", { dialog: this.localName });
+    return true;
   }
 
   protected render() {

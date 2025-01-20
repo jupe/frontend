@@ -1,9 +1,10 @@
-import { LitElement, TemplateResult, html } from "lit";
+import type { TemplateResult } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators";
-import { HassServiceTarget } from "home-assistant-js-websocket";
+import type { HassServiceTarget } from "home-assistant-js-websocket";
 import { showConfirmationDialog } from "../../dialogs/generic/show-dialog-box";
 import "./ha-progress-button";
-import { HomeAssistant } from "../../types";
+import type { HomeAssistant } from "../../types";
 import { fireEvent } from "../../common/dom/fire_event";
 
 @customElement("ha-call-service-button")
@@ -60,7 +61,7 @@ class HaCallServiceButton extends LitElement {
       this.progress = false;
       progressElement.actionSuccess();
       eventData.success = true;
-    } catch (e) {
+    } catch (_err) {
       this.progress = false;
       progressElement.actionError();
       eventData.success = false;

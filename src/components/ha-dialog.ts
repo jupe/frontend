@@ -1,7 +1,8 @@
 import { DialogBase } from "@material/mwc-dialog/mwc-dialog-base";
 import { styles } from "@material/mwc-dialog/mwc-dialog.css";
 import { mdiClose } from "@mdi/js";
-import { css, html, TemplateResult } from "lit";
+import type { TemplateResult } from "lit";
+import { css, html } from "lit";
 import { customElement } from "lit/decorators";
 import { FOCUS_TARGET } from "../dialogs/make-dialog-manager";
 import type { HomeAssistant } from "../types";
@@ -14,13 +15,13 @@ export const createCloseHeading = (
   title: string | TemplateResult
 ) => html`
   <div class="header_title">
-    <span>${title}</span>
     <ha-icon-button
       .label=${hass?.localize("ui.dialogs.generic.close") ?? "Close"}
       .path=${mdiClose}
       dialogAction="close"
       class="header_button"
     ></ha-icon-button>
+    <span>${title}</span>
   </div>
 `;
 
@@ -103,6 +104,9 @@ export class HaDialog extends DialogBase {
       .mdc-dialog__title {
         padding: 24px 24px 0 24px;
       }
+      .mdc-dialog__title:has(span) {
+        padding: 12px 12px 0;
+      }
       .mdc-dialog__actions {
         padding: 12px 24px 12px 24px;
       }
@@ -137,10 +141,8 @@ export class HaDialog extends DialogBase {
         flex-direction: column;
       }
       .header_title {
-        position: relative;
-        padding-right: 40px;
-        padding-inline-end: 40px;
-        padding-inline-start: initial;
+        display: flex;
+        align-items: center;
         direction: var(--direction);
       }
       .header_title span {
@@ -148,11 +150,9 @@ export class HaDialog extends DialogBase {
         text-overflow: ellipsis;
         white-space: nowrap;
         display: block;
+        padding-left: 4px;
       }
       .header_button {
-        position: absolute;
-        right: -12px;
-        top: -12px;
         text-decoration: none;
         color: inherit;
         inset-inline-start: initial;

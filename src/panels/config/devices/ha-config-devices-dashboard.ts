@@ -7,36 +7,29 @@ import {
   mdiPlus,
   mdiTextureBox,
 } from "@mdi/js";
-import {
-  CSSResultGroup,
-  LitElement,
-  PropertyValues,
-  TemplateResult,
-  css,
-  html,
-  nothing,
-} from "lit";
+import type { CSSResultGroup, PropertyValues, TemplateResult } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 
 import { ResizeController } from "@lit-labs/observers/resize-controller";
-import { UnsubscribeFunc } from "home-assistant-js-websocket";
+import type { UnsubscribeFunc } from "home-assistant-js-websocket";
 import { customElement, property, state } from "lit/decorators";
 import memoizeOne from "memoize-one";
 import { computeCssColor } from "../../../common/color/compute-color";
 import { formatShortDateTime } from "../../../common/datetime/format_date_time";
 import { storage } from "../../../common/decorators/storage";
-import { HASSDomEvent } from "../../../common/dom/fire_event";
+import type { HASSDomEvent } from "../../../common/dom/fire_event";
 import { computeStateDomain } from "../../../common/entity/compute_state_domain";
 import {
   PROTOCOL_INTEGRATIONS,
   protocolIntegrationPicked,
 } from "../../../common/integrations/protocolIntegrationPicked";
 import { navigate } from "../../../common/navigate";
-import { LocalizeFunc } from "../../../common/translations/localize";
+import type { LocalizeFunc } from "../../../common/translations/localize";
 import {
   hasRejectedItems,
   rejectedItems,
 } from "../../../common/util/promise-all-settled-results";
-import {
+import type {
   DataTableColumnContainer,
   RowClickedEvent,
   SelectionChangedEvent,
@@ -58,27 +51,30 @@ import "../../../components/ha-icon-button";
 import "../../../components/ha-md-menu-item";
 import "../../../components/ha-sub-menu";
 import { createAreaRegistryEntry } from "../../../data/area_registry";
-import { ConfigEntry, sortConfigEntries } from "../../../data/config_entries";
+import type { ConfigEntry } from "../../../data/config_entries";
+import { sortConfigEntries } from "../../../data/config_entries";
 import { fullEntitiesContext } from "../../../data/context";
+import type { DataTableFilters } from "../../../data/data_table_filters";
 import {
-  DataTableFilters,
   deserializeFilters,
   serializeFilters,
 } from "../../../data/data_table_filters";
-import {
+import type {
   DeviceEntityLookup,
   DeviceRegistryEntry,
+} from "../../../data/device_registry";
+import {
   computeDeviceName,
   updateDeviceRegistryEntry,
 } from "../../../data/device_registry";
+import type { EntityRegistryEntry } from "../../../data/entity_registry";
 import {
-  EntityRegistryEntry,
   findBatteryChargingEntity,
   findBatteryEntity,
 } from "../../../data/entity_registry";
-import { IntegrationManifest } from "../../../data/integration";
+import type { IntegrationManifest } from "../../../data/integration";
+import type { LabelRegistryEntry } from "../../../data/label_registry";
 import {
-  LabelRegistryEntry,
   createLabelRegistryEntry,
   subscribeLabelRegistry,
 } from "../../../data/label_registry";
@@ -86,7 +82,7 @@ import { showAlertDialog } from "../../../dialogs/generic/show-dialog-box";
 import "../../../layouts/hass-tabs-subpage-data-table";
 import { SubscribeMixin } from "../../../mixins/subscribe-mixin";
 import { haStyle } from "../../../resources/styles";
-import { HomeAssistant, Route } from "../../../types";
+import type { HomeAssistant, Route } from "../../../types";
 import { brandsUrl } from "../../../util/brands-url";
 import { showAreaRegistryDetailDialog } from "../areas/show-dialog-area-registry-detail";
 import { configSections } from "../ha-panel-config";
@@ -108,7 +104,7 @@ export class HaConfigDeviceDashboard extends SubscribeMixin(LitElement) {
 
   @property({ type: Boolean }) public narrow = false;
 
-  @property({ type: Boolean }) public isWide = false;
+  @property({ attribute: "is-wide", type: Boolean }) public isWide = false;
 
   @property({ attribute: false }) public entries!: ConfigEntry[];
 
@@ -300,12 +296,12 @@ export class HaConfigDeviceDashboard extends SubscribeMixin(LitElement) {
         deviceEntityLookup[entity.device_id].push(entity);
       }
 
-      const entryLookup: { [entryId: string]: ConfigEntry } = {};
+      const entryLookup: Record<string, ConfigEntry> = {};
       for (const entry of entries) {
         entryLookup[entry.entry_id] = entry;
       }
 
-      const manifestLookup: { [domain: string]: IntegrationManifest } = {};
+      const manifestLookup: Record<string, IntegrationManifest> = {};
       for (const manifest of manifests) {
         manifestLookup[manifest.domain] = manifest;
       }
@@ -713,7 +709,7 @@ export class HaConfigDeviceDashboard extends SubscribeMixin(LitElement) {
         .selected=${this._selected.length}
         @selection-changed=${this._handleSelectionChanged}
         .filter=${this._filter}
-        hasFilters
+        has-filters
         .filters=${Object.values(this._filters).filter((filter) =>
           Array.isArray(filter.value)
             ? filter.value.length
@@ -735,7 +731,7 @@ export class HaConfigDeviceDashboard extends SubscribeMixin(LitElement) {
         @collapsed-changed=${this._handleCollapseChanged}
         @row-click=${this._handleRowClicked}
         clickable
-        hasFab
+        has-fab
         class=${this.narrow ? "narrow" : ""}
       >
         <ha-integration-overflow-menu
@@ -753,7 +749,9 @@ export class HaConfigDeviceDashboard extends SubscribeMixin(LitElement) {
         ${Array.isArray(this._filters.config_entry?.value) &&
         this._filters.config_entry?.value.length
           ? html`<ha-alert slot="filter-pane">
-              Filtering by config entry
+              ${this.hass.localize(
+                "ui.panel.config.devices.filtering_by_config_entry"
+              )}
               ${this.entries?.find(
                 (entry) =>
                   entry.entry_id === this._filters.config_entry!.value![0]
@@ -849,7 +847,9 @@ export class HaConfigDeviceDashboard extends SubscribeMixin(LitElement) {
                   </ha-assist-chip>`
                 : html`<ha-icon-button
                     .path=${mdiDotsVertical}
-                    .label=${"ui.panel.config.automation.picker.bulk_action"}
+                    .label=${this.hass.localize(
+                      "ui.panel.config.automation.picker.bulk_action"
+                    )}
                     slot="trigger"
                   ></ha-icon-button>`}
               ${this.narrow
@@ -949,7 +949,7 @@ export class HaConfigDeviceDashboard extends SubscribeMixin(LitElement) {
 
     if (
       filteredDomains.size === 1 &&
-      (PROTOCOL_INTEGRATIONS as ReadonlyArray<string>).includes(
+      (PROTOCOL_INTEGRATIONS as readonly string[]).includes(
         [...filteredDomains][0]
       )
     ) {

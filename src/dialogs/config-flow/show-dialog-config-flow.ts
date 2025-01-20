@@ -6,8 +6,8 @@ import {
   handleConfigFlowStep,
 } from "../../data/config_flow";
 import { domainToName } from "../../data/integration";
+import type { DataEntryFlowDialogParams } from "./show-dialog-data-entry-flow";
 import {
-  DataEntryFlowDialogParams,
   loadDataEntryFlowDialog,
   showFlowDialog,
 } from "./show-dialog-data-entry-flow";
@@ -50,7 +50,7 @@ export const showConfigFlowDialog = (
 
       return description
         ? html`
-            <ha-markdown allowsvg breaks .content=${description}></ha-markdown>
+            <ha-markdown allow-svg breaks .content=${description}></ha-markdown>
           `
         : step.reason;
     },
@@ -71,7 +71,7 @@ export const showConfigFlowDialog = (
       );
       return description
         ? html`
-            <ha-markdown allowsvg breaks .content=${description}></ha-markdown>
+            <ha-markdown allow-svg breaks .content=${description}></ha-markdown>
           `
         : "";
     },
@@ -163,7 +163,7 @@ export const showConfigFlowDialog = (
         ${description
           ? html`
               <ha-markdown
-                allowsvg
+                allow-svg
                 breaks
                 .content=${description}
               ></ha-markdown>
@@ -184,7 +184,7 @@ export const showConfigFlowDialog = (
         ${description
           ? html`
               <ha-markdown
-                allowsvg
+                allow-svg
                 breaks
                 .content=${description}
               ></ha-markdown>
@@ -214,7 +214,7 @@ export const showConfigFlowDialog = (
       );
       return description
         ? html`
-            <ha-markdown allowsvg breaks .content=${description}></ha-markdown>
+            <ha-markdown allow-svg breaks .content=${description}></ha-markdown>
           `
         : "";
     },
@@ -234,7 +234,7 @@ export const showConfigFlowDialog = (
       );
       return description
         ? html`
-            <ha-markdown allowsvg breaks .content=${description}></ha-markdown>
+            <ha-markdown allow-svg breaks .content=${description}></ha-markdown>
           `
         : "";
     },

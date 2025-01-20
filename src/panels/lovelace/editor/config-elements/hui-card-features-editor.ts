@@ -1,6 +1,6 @@
 import { mdiDelete, mdiDrag, mdiPencil, mdiPlus } from "@mdi/js";
-import { HassEntity } from "home-assistant-js-websocket";
-import { CSSResultGroup, LitElement, css, html, nothing } from "lit";
+import type { HassEntity } from "home-assistant-js-websocket";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
 import { repeat } from "lit/directives/repeat";
 import { fireEvent } from "../../../../common/dom/fire_event";
@@ -10,19 +10,20 @@ import "../../../../components/ha-icon-button";
 import "../../../../components/ha-list-item";
 import "../../../../components/ha-sortable";
 import "../../../../components/ha-svg-icon";
+import type { CustomCardFeatureEntry } from "../../../../data/lovelace_custom_cards";
 import {
   CUSTOM_TYPE_PREFIX,
-  CustomCardFeatureEntry,
   getCustomCardFeatures,
   isCustomType,
   stripCustomPrefix,
 } from "../../../../data/lovelace_custom_cards";
-import { HomeAssistant } from "../../../../types";
+import type { HomeAssistant } from "../../../../types";
 import { supportsAlarmModesCardFeature } from "../../card-features/hui-alarm-modes-card-feature";
 import { supportsClimateFanModesCardFeature } from "../../card-features/hui-climate-fan-modes-card-feature";
 import { supportsClimateHvacModesCardFeature } from "../../card-features/hui-climate-hvac-modes-card-feature";
 import { supportsClimatePresetModesCardFeature } from "../../card-features/hui-climate-preset-modes-card-feature";
 import { supportsClimateSwingModesCardFeature } from "../../card-features/hui-climate-swing-modes-card-feature";
+import { supportsClimateSwingHorizontalModesCardFeature } from "../../card-features/hui-climate-swing-horizontal-modes-card-feature";
 import { supportsCoverOpenCloseCardFeature } from "../../card-features/hui-cover-open-close-card-feature";
 import { supportsCoverPositionCardFeature } from "../../card-features/hui-cover-position-card-feature";
 import { supportsCoverTiltCardFeature } from "../../card-features/hui-cover-tilt-card-feature";
@@ -36,6 +37,7 @@ import { supportsLightBrightnessCardFeature } from "../../card-features/hui-ligh
 import { supportsLightColorTempCardFeature } from "../../card-features/hui-light-color-temp-card-feature";
 import { supportsLockCommandsCardFeature } from "../../card-features/hui-lock-commands-card-feature";
 import { supportsLockOpenDoorCardFeature } from "../../card-features/hui-lock-open-door-card-feature";
+import { supportsMediaPlayerVolumeSliderCardFeature } from "../../card-features/hui-media-player-volume-slider-card-feature";
 import { supportsNumericInputCardFeature } from "../../card-features/hui-numeric-input-card-feature";
 import { supportsSelectOptionsCardFeature } from "../../card-features/hui-select-options-card-feature";
 import { supportsTargetHumidityCardFeature } from "../../card-features/hui-target-humidity-card-feature";
@@ -43,7 +45,7 @@ import { supportsTargetTemperatureCardFeature } from "../../card-features/hui-ta
 import { supportsUpdateActionsCardFeature } from "../../card-features/hui-update-actions-card-feature";
 import { supportsVacuumCommandsCardFeature } from "../../card-features/hui-vacuum-commands-card-feature";
 import { supportsWaterHeaterOperationModesCardFeature } from "../../card-features/hui-water-heater-operation-modes-card-feature";
-import { LovelaceCardFeatureConfig } from "../../card-features/types";
+import type { LovelaceCardFeatureConfig } from "../../card-features/types";
 import { getCardFeatureElementClass } from "../../create-element/create-card-feature-element";
 
 export type FeatureType = LovelaceCardFeatureConfig["type"];
@@ -55,6 +57,7 @@ const UI_FEATURE_TYPES = [
   "climate-hvac-modes",
   "climate-preset-modes",
   "climate-swing-modes",
+  "climate-swing-horizontal-modes",
   "cover-open-close",
   "cover-position",
   "cover-tilt-position",
@@ -68,6 +71,7 @@ const UI_FEATURE_TYPES = [
   "light-color-temp",
   "lock-commands",
   "lock-open-door",
+  "media-player-volume-slider",
   "numeric-input",
   "select-options",
   "target-humidity",
@@ -85,6 +89,7 @@ const EDITABLES_FEATURE_TYPES = new Set<UiFeatureTypes>([
   "climate-hvac-modes",
   "climate-preset-modes",
   "climate-swing-modes",
+  "climate-swing-horizontal-modes",
   "fan-preset-modes",
   "humidifier-modes",
   "lawn-mower-commands",
@@ -102,6 +107,8 @@ const SUPPORTS_FEATURE_TYPES: Record<
   "alarm-modes": supportsAlarmModesCardFeature,
   "climate-fan-modes": supportsClimateFanModesCardFeature,
   "climate-swing-modes": supportsClimateSwingModesCardFeature,
+  "climate-swing-horizontal-modes":
+    supportsClimateSwingHorizontalModesCardFeature,
   "climate-hvac-modes": supportsClimateHvacModesCardFeature,
   "climate-preset-modes": supportsClimatePresetModesCardFeature,
   "cover-open-close": supportsCoverOpenCloseCardFeature,
@@ -117,6 +124,7 @@ const SUPPORTS_FEATURE_TYPES: Record<
   "light-color-temp": supportsLightColorTempCardFeature,
   "lock-commands": supportsLockCommandsCardFeature,
   "lock-open-door": supportsLockOpenDoorCardFeature,
+  "media-player-volume-slider": supportsMediaPlayerVolumeSliderCardFeature,
   "numeric-input": supportsNumericInputCardFeature,
   "select-options": supportsSelectOptionsCardFeature,
   "target-humidity": supportsTargetHumidityCardFeature,
@@ -391,61 +399,59 @@ export class HuiCardFeaturesEditor extends LitElement {
     });
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      :host {
-        display: flex !important;
-        flex-direction: column;
-      }
-      ha-button-menu {
-        margin-top: 8px;
-      }
-      .feature {
-        display: flex;
-        align-items: center;
-      }
-      .feature .handle {
-        cursor: move; /* fallback if grab cursor is unsupported */
-        cursor: grab;
-        padding-right: 8px;
-        padding-inline-end: 8px;
-        padding-inline-start: initial;
-        direction: var(--direction);
-      }
-      .feature .handle > * {
-        pointer-events: none;
-      }
+  static styles = css`
+    :host {
+      display: flex !important;
+      flex-direction: column;
+    }
+    ha-button-menu {
+      margin-top: 8px;
+    }
+    .feature {
+      display: flex;
+      align-items: center;
+    }
+    .feature .handle {
+      cursor: move; /* fallback if grab cursor is unsupported */
+      cursor: grab;
+      padding-right: 8px;
+      padding-inline-end: 8px;
+      padding-inline-start: initial;
+      direction: var(--direction);
+    }
+    .feature .handle > * {
+      pointer-events: none;
+    }
 
-      .feature-content {
-        height: 60px;
-        font-size: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-grow: 1;
-      }
+    .feature-content {
+      height: 60px;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-grow: 1;
+    }
 
-      .feature-content div {
-        display: flex;
-        flex-direction: column;
-      }
+    .feature-content div {
+      display: flex;
+      flex-direction: column;
+    }
 
-      .remove-icon,
-      .edit-icon {
-        --mdc-icon-button-size: 36px;
-        color: var(--secondary-text-color);
-      }
+    .remove-icon,
+    .edit-icon {
+      --mdc-icon-button-size: 36px;
+      color: var(--secondary-text-color);
+    }
 
-      .secondary {
-        font-size: 12px;
-        color: var(--secondary-text-color);
-      }
+    .secondary {
+      font-size: 12px;
+      color: var(--secondary-text-color);
+    }
 
-      li[divider] {
-        border-bottom-color: var(--divider-color);
-      }
-    `;
-  }
+    li[divider] {
+      border-bottom-color: var(--divider-color);
+    }
+  `;
 }
 
 declare global {

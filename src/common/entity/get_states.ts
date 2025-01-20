@@ -1,4 +1,4 @@
-import { HassEntity } from "home-assistant-js-websocket";
+import type { HassEntity } from "home-assistant-js-websocket";
 import { computeStateDomain } from "./compute_state_domain";
 import { UNAVAILABLE_STATES } from "../../data/entity";
 
@@ -15,6 +15,7 @@ export const FIXED_DOMAIN_STATES = {
     "pending",
     "triggered",
   ],
+  assist_satellite: ["idle", "listening", "responding", "processing"],
   automation: ["on", "off"],
   binary_sensor: ["on", "off"],
   button: [],
@@ -165,7 +166,7 @@ const FIXED_DOMAIN_ATTRIBUTE_STATES = {
       "channel",
       "channels",
       "composer",
-      "contibuting_artist",
+      "contributing_artist",
       "episode",
       "game",
       "genre",

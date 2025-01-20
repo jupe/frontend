@@ -1,13 +1,7 @@
-import Fuse, { IFuseOptions } from "fuse.js";
-import {
-  CSSResultGroup,
-  LitElement,
-  PropertyValues,
-  TemplateResult,
-  css,
-  html,
-  nothing,
-} from "lit";
+import type { IFuseOptions } from "fuse.js";
+import Fuse from "fuse.js";
+import type { CSSResultGroup, PropertyValues, TemplateResult } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { classMap } from "lit/directives/class-map";
 import { styleMap } from "lit/directives/style-map";
@@ -20,11 +14,11 @@ import { stripDiacritics } from "../../../../common/string/strip-diacritics";
 import "../../../../components/ha-circular-progress";
 import "../../../../components/search-input";
 import { isUnavailableState } from "../../../../data/entity";
-import { LovelaceBadgeConfig } from "../../../../data/lovelace/config/badge";
+import type { LovelaceBadgeConfig } from "../../../../data/lovelace/config/badge";
 import type { LovelaceConfig } from "../../../../data/lovelace/config/types";
+import type { CustomBadgeEntry } from "../../../../data/lovelace_custom_cards";
 import {
   CUSTOM_TYPE_PREFIX,
-  CustomBadgeEntry,
   customBadges,
   getCustomBadgeEntry,
 } from "../../../../data/lovelace_custom_cards";
@@ -399,7 +393,7 @@ export class HuiBadgePicker extends LitElement {
     let newBadgeEl: LovelaceBadge;
     try {
       newBadgeEl = this._tryCreateBadgeElement(config);
-    } catch (err: any) {
+    } catch (_err: any) {
       return;
     }
     if (badgeElToReplace.parentElement) {
@@ -437,7 +431,7 @@ export class HuiBadgePicker extends LitElement {
       if (showElement) {
         try {
           element = this._tryCreateBadgeElement(badgeConfig);
-        } catch (err: any) {
+        } catch (_err: any) {
           element = undefined;
         }
       }

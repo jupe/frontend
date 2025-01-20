@@ -1,11 +1,16 @@
-import { css, html, LitElement, nothing, TemplateResult } from "lit";
+import type { TemplateResult } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
 import { repeat } from "lit/directives/repeat";
-import { LabelRegistryEntry } from "../../data/label_registry";
+import type { LabelRegistryEntry } from "../../data/label_registry";
 import { computeCssColor } from "../../common/color/compute-color";
 import { fireEvent } from "../../common/dom/fire_event";
 import "../ha-label";
 import { stringCompare } from "../../common/string/compare";
+import "../chips/ha-chip-set";
+import "../ha-button-menu";
+import "../ha-icon";
+import "../ha-list-item";
 
 @customElement("ha-data-table-labels")
 class HaDataTableLabels extends LitElement {
@@ -93,31 +98,29 @@ class HaDataTableLabels extends LitElement {
     }
   }
 
-  static get styles() {
-    return css`
-      :host {
-        display: block;
-        flex-grow: 1;
-        margin-top: 4px;
-        height: 22px;
-      }
-      ha-chip-set {
-        position: fixed;
-        flex-wrap: nowrap;
-      }
-      ha-label {
-        --ha-label-background-color: var(--color, var(--grey-color));
-        --ha-label-background-opacity: 0.5;
-      }
-      ha-button-menu {
-        border-radius: 10px;
-      }
-      .plus {
-        --ha-label-background-color: transparent;
-        border: 1px solid var(--divider-color);
-      }
-    `;
-  }
+  static styles = css`
+    :host {
+      display: block;
+      flex-grow: 1;
+      margin-top: 4px;
+      height: 22px;
+    }
+    ha-chip-set {
+      position: fixed;
+      flex-wrap: nowrap;
+    }
+    ha-label {
+      --ha-label-background-color: var(--color, var(--grey-color));
+      --ha-label-background-opacity: 0.5;
+    }
+    ha-button-menu {
+      border-radius: 10px;
+    }
+    .plus {
+      --ha-label-background-color: transparent;
+      border: 1px solid var(--divider-color);
+    }
+  `;
 }
 
 declare global {

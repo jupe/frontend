@@ -1,11 +1,11 @@
 import { strStartsWith } from "../common/string/starts-with";
-import { Context, HomeAssistant } from "../types";
-import {
+import type { Context, HomeAssistant } from "../types";
+import type {
   BlueprintAutomationConfig,
   ManualAutomationConfig,
-  flattenTriggers,
 } from "./automation";
-import { BlueprintScriptConfig, ScriptConfig } from "./script";
+import { flattenTriggers } from "./automation";
+import type { BlueprintScriptConfig, ScriptConfig } from "./script";
 
 interface BaseTraceStep {
   path: string;
@@ -151,7 +151,7 @@ export const loadTraces = <T extends keyof TraceTypes>(
   hass: HomeAssistant,
   domain: T,
   item_id: string
-): Promise<Array<TraceTypes[T]["short"]>> =>
+): Promise<TraceTypes[T]["short"][]> =>
   hass.callWS({
     type: "trace/list",
     domain,

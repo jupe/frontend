@@ -1,13 +1,7 @@
-import Fuse, { IFuseOptions } from "fuse.js";
-import {
-  CSSResultGroup,
-  LitElement,
-  PropertyValues,
-  TemplateResult,
-  css,
-  html,
-  nothing,
-} from "lit";
+import type { IFuseOptions } from "fuse.js";
+import Fuse from "fuse.js";
+import type { CSSResultGroup, PropertyValues, TemplateResult } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { classMap } from "lit/directives/class-map";
 import { styleMap } from "lit/directives/style-map";
@@ -22,9 +16,9 @@ import "../../../../components/search-input";
 import { isUnavailableState } from "../../../../data/entity";
 import type { LovelaceCardConfig } from "../../../../data/lovelace/config/card";
 import type { LovelaceConfig } from "../../../../data/lovelace/config/types";
+import type { CustomCardEntry } from "../../../../data/lovelace_custom_cards";
 import {
   CUSTOM_TYPE_PREFIX,
-  CustomCardEntry,
   customCards,
   getCustomCardEntry,
 } from "../../../../data/lovelace_custom_cards";
@@ -74,6 +68,16 @@ export class HuiCardPicker extends LitElement {
   private _unusedEntities?: string[];
 
   private _usedEntities?: string[];
+
+  public async focus(): Promise<void> {
+    const searchInput = this.renderRoot.querySelector("search-input");
+    if (searchInput) {
+      searchInput.focus();
+    } else {
+      await this.updateComplete;
+      this.focus();
+    }
+  }
 
   private _filterCards = memoizeOne(
     (cardElements: CardElement[], filter?: string): CardElement[] => {
@@ -397,7 +401,7 @@ export class HuiCardPicker extends LitElement {
     let newCardEl: LovelaceCard;
     try {
       newCardEl = this._tryCreateCardElement(config);
-    } catch (err: any) {
+    } catch (_err: any) {
       return;
     }
     if (cardElToReplace.parentElement) {
@@ -432,7 +436,7 @@ export class HuiCardPicker extends LitElement {
       if (showElement) {
         try {
           element = this._tryCreateCardElement(cardConfig);
-        } catch (err: any) {
+        } catch (_err: any) {
           element = undefined;
         }
       }

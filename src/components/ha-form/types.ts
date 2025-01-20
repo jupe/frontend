@@ -1,5 +1,5 @@
 import type { LitElement } from "lit";
-import { Selector } from "../../data/selector";
+import type { Selector } from "../../data/selector";
 import type { HaDurationData } from "../ha-duration-input";
 
 export type HaFormSchema =
@@ -66,7 +66,7 @@ export interface HaFormIntegerSchema extends HaFormBaseSchema {
 
 export interface HaFormSelectSchema extends HaFormBaseSchema {
   type: "select";
-  options: ReadonlyArray<readonly [string, string]>;
+  options: readonly (readonly [string, string])[];
 }
 
 export interface HaFormMultiSelectSchema extends HaFormBaseSchema {
@@ -74,7 +74,7 @@ export interface HaFormMultiSelectSchema extends HaFormBaseSchema {
   options:
     | Record<string, string>
     | readonly string[]
-    | ReadonlyArray<readonly [string, string]>;
+    | readonly (readonly [string, string])[];
 }
 
 export interface HaFormFloatSchema extends HaFormBaseSchema {
@@ -85,6 +85,7 @@ export interface HaFormStringSchema extends HaFormBaseSchema {
   type: "string";
   format?: string;
   autocomplete?: string;
+  autofocus?: boolean;
 }
 
 export interface HaFormBooleanSchema extends HaFormBaseSchema {
@@ -103,9 +104,7 @@ export type SchemaUnion<
   ? SchemaUnion<Schema["schema"]> | Schema
   : Schema;
 
-export interface HaFormDataContainer {
-  [key: string]: HaFormData;
-}
+export type HaFormDataContainer = Record<string, HaFormData>;
 
 export type HaFormData =
   | HaFormStringData

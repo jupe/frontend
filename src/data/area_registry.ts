@@ -1,8 +1,8 @@
 import { stringCompare } from "../common/string/compare";
-import { HomeAssistant } from "../types";
-import { DeviceRegistryEntry } from "./device_registry";
-import { EntityRegistryEntry } from "./entity_registry";
-import { RegistryEntry } from "./registry";
+import type { HomeAssistant } from "../types";
+import type { DeviceRegistryEntry } from "./device_registry";
+import type { EntityRegistryEntry } from "./entity_registry";
+import type { RegistryEntry } from "./registry";
 
 export { subscribeAreaRegistry } from "./ws-area_registry";
 
@@ -16,13 +16,9 @@ export interface AreaRegistryEntry extends RegistryEntry {
   aliases: string[];
 }
 
-export interface AreaEntityLookup {
-  [areaId: string]: EntityRegistryEntry[];
-}
+export type AreaEntityLookup = Record<string, EntityRegistryEntry[]>;
 
-export interface AreaDeviceLookup {
-  [areaId: string]: DeviceRegistryEntry[];
-}
+export type AreaDeviceLookup = Record<string, DeviceRegistryEntry[]>;
 
 export interface AreaRegistryEntryMutableParams {
   name: string;

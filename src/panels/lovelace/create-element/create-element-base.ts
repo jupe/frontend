@@ -1,23 +1,23 @@
 import { fireEvent } from "../../../common/dom/fire_event";
-import {
+import type {
   LovelaceSectionElement,
   LovelaceViewElement,
 } from "../../../data/lovelace";
-import { LovelaceBadgeConfig } from "../../../data/lovelace/config/badge";
-import { LovelaceCardConfig } from "../../../data/lovelace/config/card";
-import { LovelaceSectionConfig } from "../../../data/lovelace/config/section";
-import { LovelaceViewConfig } from "../../../data/lovelace/config/view";
+import type { LovelaceBadgeConfig } from "../../../data/lovelace/config/badge";
+import type { LovelaceCardConfig } from "../../../data/lovelace/config/card";
+import type { LovelaceSectionConfig } from "../../../data/lovelace/config/section";
+import type { LovelaceViewConfig } from "../../../data/lovelace/config/view";
 import {
   isCustomType,
   stripCustomPrefix,
 } from "../../../data/lovelace_custom_cards";
-import { LovelaceCardFeatureConfig } from "../card-features/types";
+import type { LovelaceCardFeatureConfig } from "../card-features/types";
 import type { ErrorCardConfig } from "../cards/types";
-import { LovelaceElement, LovelaceElementConfig } from "../elements/types";
-import { LovelaceRow, LovelaceRowConfig } from "../entity-rows/types";
-import { LovelaceHeaderFooterConfig } from "../header-footer/types";
-import { LovelaceHeadingBadgeConfig } from "../heading-badges/types";
-import {
+import type { LovelaceElement, LovelaceElementConfig } from "../elements/types";
+import type { LovelaceRow, LovelaceRowConfig } from "../entity-rows/types";
+import type { LovelaceHeaderFooterConfig } from "../header-footer/types";
+import type { LovelaceHeadingBadgeConfig } from "../heading-badges/types";
+import type {
   LovelaceBadge,
   LovelaceBadgeConstructor,
   LovelaceCard,
@@ -217,8 +217,8 @@ const _lazyCreate = <T extends keyof CreateElementConfigTypes>(
       fireEvent(element, "ll-upgrade");
       // @ts-ignore
       element.setConfig(config);
-    } catch (err: any) {
-      // We let it rebuild and the error wil be handled by _createElement
+    } catch (_err: any) {
+      // We let it rebuild and the error will be handled by _createElement
       fireEvent(element, "ll-rebuild");
     }
   });
@@ -232,7 +232,7 @@ export const createLovelaceElement = <T extends keyof CreateElementConfigTypes>(
   tagSuffix: T,
   config: CreateElementConfigTypes[T]["config"],
   alwaysLoadTypes?: Set<string>,
-  lazyLoadTypes?: { [domain: string]: () => Promise<unknown> },
+  lazyLoadTypes?: Record<string, () => Promise<unknown>>,
   // Allow looking at "entity" in config and mapping that to a type
   domainTypes?: { _domain_not_found: string; [domain: string]: string },
   // Default type if no type given. If given, entity types will not work.
@@ -260,7 +260,7 @@ export const tryCreateLovelaceElement = <
   tagSuffix: T,
   config: CreateElementConfigTypes[T]["config"],
   alwaysLoadTypes?: Set<string>,
-  lazyLoadTypes?: { [domain: string]: () => Promise<unknown> },
+  lazyLoadTypes?: Record<string, () => Promise<unknown>>,
   // Allow looking at "entity" in config and mapping that to a type
   domainTypes?: { _domain_not_found: string; [domain: string]: string },
   // Default type if no type given. If given, entity types will not work.
@@ -321,7 +321,7 @@ export const getLovelaceElementClass = async <
   type: string,
   tagSuffix: T,
   alwaysLoadTypes?: Set<string>,
-  lazyLoadTypes?: { [domain: string]: () => Promise<unknown> }
+  lazyLoadTypes?: Record<string, () => Promise<unknown>>
 ): Promise<CreateElementConfigTypes[T]["constructor"]> => {
   const customTag = _getCustomTag(type);
 

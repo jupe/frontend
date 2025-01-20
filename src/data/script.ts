@@ -1,8 +1,9 @@
-import {
+import type {
   HassEntityAttributeBase,
   HassEntityBase,
   HassServiceTarget,
 } from "home-assistant-js-websocket";
+import type { Describe } from "superstruct";
 import {
   object,
   optional,
@@ -12,21 +13,20 @@ import {
   assign,
   literal,
   is,
-  Describe,
   boolean,
 } from "superstruct";
 import { arrayLiteralIncludes } from "../common/array/literal-includes";
 import { navigate } from "../common/navigate";
-import { HomeAssistant } from "../types";
-import {
+import type { HomeAssistant } from "../types";
+import type {
   Condition,
-  migrateAutomationTrigger,
   ShorthandAndCondition,
   ShorthandNotCondition,
   ShorthandOrCondition,
   Trigger,
 } from "./automation";
-import { BlueprintInput } from "./blueprint";
+import { migrateAutomationTrigger } from "./automation";
+import type { BlueprintInput } from "./blueprint";
 import { computeObjectId } from "../common/entity/compute_object_id";
 import { createSearchParam } from "../common/url/search-params";
 
@@ -40,7 +40,7 @@ export const baseActionStruct = object({
   enabled: optional(boolean()),
 });
 
-const targetStruct = object({
+export const targetStruct = object({
   entity_id: optional(union([string(), array(string())])),
   device_id: optional(union([string(), array(string())])),
   area_id: optional(union([string(), array(string())])),
@@ -72,16 +72,6 @@ const playMediaActionStruct: Describe<PlayMediaAction> = assign(
   })
 );
 
-const activateSceneActionStruct: Describe<ServiceSceneAction> = assign(
-  baseActionStruct,
-  object({
-    action: literal("scene.turn_on"),
-    target: optional(object({ entity_id: optional(string()) })),
-    entity_id: optional(string()),
-    metadata: object(),
-  })
-);
-
 export interface ScriptEntity extends HassEntityBase {
   attributes: HassEntityAttributeBase & {
     last_triggered: string;
@@ -107,9 +97,7 @@ export interface BlueprintScriptConfig extends ManualScriptConfig {
   use_blueprint: { path: string; input?: BlueprintInput };
 }
 
-export interface Fields {
-  [key: string]: Field;
-}
+export type Fields = Record<string, Field>;
 
 export interface Field {
   name?: string;
@@ -160,17 +148,6 @@ export interface DelayActionParts extends BaseAction {
 export interface DelayAction extends BaseAction {
   delay: number | Partial<DelayActionParts> | string;
 }
-
-export interface ServiceSceneAction extends BaseAction {
-  action: "scene.turn_on";
-  target?: { entity_id?: string };
-  entity_id?: string;
-  metadata: Record<string, unknown>;
-}
-export interface LegacySceneAction extends BaseAction {
-  scene: string;
-}
-export type SceneAction = ServiceSceneAction | LegacySceneAction;
 
 export interface WaitAction extends BaseAction {
   wait_template: string;
@@ -224,13 +201,14 @@ export interface ForEachRepeat extends BaseRepeat {
   for_each: string | any[];
 }
 
-export interface ChooseActionChoice extends BaseAction {
+export interface Option {
+  alias?: string;
   conditions: string | Condition[];
   sequence: Action | Action[];
 }
 
 export interface ChooseAction extends BaseAction {
-  choose: ChooseActionChoice | ChooseActionChoice[] | null;
+  choose: Option | Option[] | null;
   default?: Action | Action[];
 }
 
@@ -262,16 +240,13 @@ export interface SetConversationResponseAction extends BaseAction {
   set_conversation_response: string;
 }
 
-interface UnknownAction extends BaseAction {
-  [key: string]: unknown;
-}
+interface UnknownAction extends BaseAction, Record<string, unknown> {}
 
 export type NonConditionAction =
   | EventAction
   | DeviceAction
   | ServiceAction
   | DelayAction
-  | SceneAction
   | WaitAction
   | WaitForTriggerAction
   | RepeatAction
@@ -297,7 +272,6 @@ export interface ActionTypes {
   check_condition: Condition;
   fire_event: EventAction;
   device_action: DeviceAction;
-  activate_scene: SceneAction;
   repeat: RepeatAction;
   choose: ChooseAction;
   if: IfAction;
@@ -380,9 +354,6 @@ export const getActionType = (action: Action): ActionType => {
   if ("device_id" in action) {
     return "device_action";
   }
-  if ("scene" in action) {
-    return "activate_scene";
-  }
   if ("repeat" in action) {
     return "repeat";
   }
@@ -412,9 +383,6 @@ export const getActionType = (action: Action): ActionType => {
   }
   if ("action" in action || "service" in action) {
     if ("metadata" in action) {
-      if (is(action, activateSceneActionStruct)) {
-        return "activate_scene";
-      }
       if (is(action, playMediaActionStruct)) {
         return "play_media";
       }
@@ -435,6 +403,10 @@ export const hasScriptFields = (
 export const migrateAutomationAction = (
   action: Action | Action[]
 ): Action | Action[] => {
+  if (!action) {
+    return action;
+  }
+
   if (Array.isArray(action)) {
     return action.map(migrateAutomationAction) as Action[];
   }
@@ -444,6 +416,15 @@ export const migrateAutomationAction = (
       action.action = action.service;
     }
     delete action.service;
+  }
+
+  // legacy scene (scene: scene_name)
+  if ("scene" in action) {
+    action.action = "scene.turn_on";
+    action.target = {
+      entity_id: action.scene,
+    };
+    delete action.scene;
   }
 
   if ("sequence" in action) {

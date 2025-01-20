@@ -7,7 +7,7 @@ import {
 import { css } from "lit";
 import { customElement, property } from "lit/decorators";
 
-// workaround to be able to overlay an dialog with another dialog
+// workaround to be able to overlay a dialog with another dialog
 MdDialog.addInitializer(async (instance) => {
   await instance.updateComplete;
 
@@ -41,6 +41,7 @@ MdDialog.addInitializer(async (instance) => {
   };
 });
 
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 let DIALOG_POLYFILL: Promise<typeof import("dialog-polyfill")>;
 
 /**
@@ -115,7 +116,7 @@ export class HaMdDialog extends MdDialog {
     });
   }
 
-  _handleCancel(closeEvent: Event) {
+  private _handleCancel(closeEvent: Event) {
     if (this.disableCancelAction) {
       closeEvent.preventDefault();
       const dialogElement = this.shadowRoot?.querySelector("dialog .container");
@@ -163,8 +164,8 @@ export class HaMdDialog extends MdDialog {
         min-width: 320px;
       }
 
-      :host(:not([type="alert"])) {
-        @media all and (max-width: 450px), all and (max-height: 500px) {
+      @media all and (max-width: 450px), all and (max-height: 500px) {
+        :host(:not([type="alert"])) {
           min-width: calc(
             100vw - env(safe-area-inset-right) - env(safe-area-inset-left)
           );
@@ -177,22 +178,26 @@ export class HaMdDialog extends MdDialog {
         }
       }
 
-      :host ::slotted(ha-dialog-header) {
+      ::slotted(ha-dialog-header[slot="headline"]) {
         display: contents;
+      }
+
+      .scroller {
+        overflow: var(--dialog-content-overflow, auto);
       }
 
       slot[name="content"]::slotted(*) {
         padding: var(--dialog-content-padding, 24px);
       }
       .scrim {
-        z-index: 10; // overlay navigation
+        z-index: 10; /* overlay navigation */
       }
     `,
   ];
 }
 
 // by default the dialog open/close animation will be from/to the top
-// but if we have a special mobile dialog which is at the bottom of the screen, an from bottom animation can be used:
+// but if we have a special mobile dialog which is at the bottom of the screen, a from bottom animation can be used:
 const OPEN_FROM_BOTTOM_ANIMATION: DialogAnimation = {
   ...DIALOG_DEFAULT_OPEN_ANIMATION,
   dialog: [

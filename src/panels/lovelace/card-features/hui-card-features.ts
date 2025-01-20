@@ -1,7 +1,7 @@
 import type { HassEntity } from "home-assistant-js-websocket";
-import { CSSResultGroup, LitElement, css, html, nothing } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
-import { HomeAssistant } from "../../../types";
+import type { HomeAssistant } from "../../../types";
 import "./hui-card-feature";
 import type { LovelaceCardFeatureConfig } from "./types";
 
@@ -35,31 +35,29 @@ export class HuiCardFeatures extends LitElement {
     `;
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      :host {
-        --feature-color: var(--state-icon-color);
-        --feature-padding: 12px;
-        --feature-height: 42px;
-        --feature-border-radius: 12px;
-        --feature-button-spacing: 12px;
-        position: relative;
-        width: 100%;
-      }
-      .container {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        padding: var(--feature-padding);
-        padding-top: 0px;
-        gap: var(--feature-padding);
-        width: 100%;
-        height: 100%;
-        box-sizing: border-box;
-        justify-content: space-evenly;
-      }
-    `;
-  }
+  static styles = css`
+    :host {
+      --feature-color: var(--state-icon-color);
+      --feature-padding: 12px;
+      --feature-height: 42px;
+      --feature-border-radius: 12px;
+      --feature-button-spacing: 12px;
+      position: relative;
+      width: 100%;
+    }
+    .container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      padding: var(--feature-padding);
+      padding-top: 0px;
+      gap: var(--feature-padding);
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      justify-content: space-evenly;
+    }
+  `;
 }
 
 declare global {

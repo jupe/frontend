@@ -1,7 +1,9 @@
-import { Button } from "@material/mwc-button";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import type { Button } from "@material/mwc-button";
+import type { TemplateResult } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, property, query } from "lit/decorators";
 import { FOCUS_TARGET } from "../dialogs/make-dialog-manager";
+import { fireEvent } from "../common/dom/fire_event";
 import type { HaIconButton } from "./ha-icon-button";
 import "./ha-menu";
 import type { HaMenu } from "./ha-menu";
@@ -39,10 +41,20 @@ export class HaMdButtonMenu extends LitElement {
       <ha-menu
         .positioning=${this.positioning}
         .hasOverflow=${this.hasOverflow}
+        @opening=${this._handleOpening}
+        @closing=${this._handleClosing}
       >
         <slot></slot>
       </ha-menu>
     `;
+  }
+
+  private _handleOpening(): void {
+    fireEvent(this, "opening", undefined, { composed: false });
+  }
+
+  private _handleClosing(): void {
+    fireEvent(this, "closing", undefined, { composed: false });
   }
 
   private _handleClick(): void {
@@ -69,21 +81,26 @@ export class HaMdButtonMenu extends LitElement {
     }
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      :host {
-        display: inline-block;
-        position: relative;
-      }
-      ::slotted([disabled]) {
-        color: var(--disabled-text-color);
-      }
-    `;
-  }
+  static styles = css`
+    :host {
+      display: inline-block;
+      position: relative;
+    }
+    ::slotted([disabled]) {
+      color: var(--disabled-text-color);
+    }
+  `;
 }
 
 declare global {
   interface HTMLElementTagNameMap {
     "ha-md-button-menu": HaMdButtonMenu;
+  }
+}
+
+declare global {
+  interface HASSDomEvents {
+    opening: undefined;
+    closing: undefined;
   }
 }

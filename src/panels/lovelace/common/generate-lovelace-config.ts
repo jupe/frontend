@@ -1,4 +1,4 @@
-import { HassEntities, HassEntity } from "home-assistant-js-websocket";
+import type { HassEntities, HassEntity } from "home-assistant-js-websocket";
 import { SENSOR_ENTITIES, ASSIST_ENTITIES } from "../../../common/const";
 import { computeDomain } from "../../../common/entity/compute_domain";
 import { computeStateDomain } from "../../../common/entity/compute_state_domain";
@@ -6,21 +6,21 @@ import { computeStateName } from "../../../common/entity/compute_state_name";
 import { splitByGroups } from "../../../common/entity/split_by_groups";
 import { stripPrefixFromEntityName } from "../../../common/entity/strip_prefix_from_entity_name";
 import { stringCompare } from "../../../common/string/compare";
-import { LocalizeFunc } from "../../../common/translations/localize";
+import type { LocalizeFunc } from "../../../common/translations/localize";
 import type { AreaFilterValue } from "../../../components/ha-area-filter";
 import { areaCompare } from "../../../data/area_registry";
-import {
+import type {
   EnergyPreferences,
   GridSourceTypeEnergyPreference,
 } from "../../../data/energy";
 import { domainToName } from "../../../data/integration";
-import { LovelaceCardConfig } from "../../../data/lovelace/config/card";
-import { LovelaceSectionConfig } from "../../../data/lovelace/config/section";
-import { LovelaceViewConfig } from "../../../data/lovelace/config/view";
+import type { LovelaceCardConfig } from "../../../data/lovelace/config/card";
+import type { LovelaceSectionConfig } from "../../../data/lovelace/config/section";
+import type { LovelaceViewConfig } from "../../../data/lovelace/config/view";
 import { computeUserInitials } from "../../../data/user";
-import { HomeAssistant } from "../../../types";
+import type { HomeAssistant } from "../../../types";
 import { HELPER_DOMAINS } from "../../config/helpers/const";
-import {
+import type {
   AlarmPanelCardConfig,
   EntitiesCardConfig,
   HumidifierCardConfig,
@@ -29,10 +29,10 @@ import {
   ThermostatCardConfig,
   TileCardConfig,
 } from "../cards/types";
-import { EntityConfig } from "../entity-rows/types";
-import { ButtonsHeaderFooterConfig } from "../header-footer/types";
-import { LovelaceBadgeConfig } from "../../../data/lovelace/config/badge";
-import { EntityBadgeConfig } from "../badges/types";
+import type { EntityConfig } from "../entity-rows/types";
+import type { ButtonsHeaderFooterConfig } from "../header-footer/types";
+import type { LovelaceBadgeConfig } from "../../../data/lovelace/config/badge";
+import type { EntityBadgeConfig } from "../badges/types";
 
 const HIDE_DOMAIN = new Set([
   "automation",
@@ -53,8 +53,8 @@ const HIDE_DOMAIN = new Set([
 const HIDE_PLATFORM = new Set(["mobile_app"]);
 
 interface SplittedByAreaDevice {
-  areasWithEntities: { [areaId: string]: HassEntity[] };
-  devicesWithEntities: { [deviceId: string]: HassEntity[] };
+  areasWithEntities: Record<string, HassEntity[]>;
+  devicesWithEntities: Record<string, HassEntity[]>;
   otherEntities: HassEntities;
 }
 
@@ -132,7 +132,7 @@ export const computeCards = (
   const cards: LovelaceCardConfig[] = [];
 
   // For entity card
-  const entitiesConf: Array<string | EntityConfig> = [];
+  const entitiesConf: (string | EntityConfig)[] = [];
 
   const titlePrefix = entityCardOptions.title
     ? entityCardOptions.title.toLowerCase()
@@ -365,7 +365,7 @@ export const generateViewConfig = (
   icon: string | undefined,
   entities: HassEntities
 ): LovelaceViewConfig => {
-  const ungroupedEntitites: { [domain: string]: string[] } = {};
+  const ungroupedEntitites: Record<string, string[]> = {};
 
   // Organize ungrouped entities in ungrouped things
   for (const entityId of Object.keys(entities)) {

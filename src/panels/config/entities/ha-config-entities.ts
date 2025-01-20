@@ -15,15 +15,9 @@ import {
   mdiToggleSwitch,
   mdiToggleSwitchOffOutline,
 } from "@mdi/js";
-import { HassEntity, UnsubscribeFunc } from "home-assistant-js-websocket";
-import {
-  CSSResultGroup,
-  LitElement,
-  PropertyValues,
-  css,
-  html,
-  nothing,
-} from "lit";
+import type { HassEntity, UnsubscribeFunc } from "home-assistant-js-websocket";
+import type { CSSResultGroup, PropertyValues } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators";
 import { ifDefined } from "lit/directives/if-defined";
 import { styleMap } from "lit/directives/style-map";
@@ -33,12 +27,19 @@ import { formatShortDateTime } from "../../../common/datetime/format_date_time";
 import { storage } from "../../../common/decorators/storage";
 import type { HASSDomEvent } from "../../../common/dom/fire_event";
 import { computeDomain } from "../../../common/entity/compute_domain";
+import {
+  isDeletableEntity,
+  deleteEntity,
+} from "../../../common/entity/delete_entity";
+import type { Helper } from "../helpers/const";
+import { isHelperDomain } from "../helpers/const";
+import { HELPERS_CRUD } from "../../../data/helpers_crud";
 import { computeStateName } from "../../../common/entity/compute_state_name";
 import {
   PROTOCOL_INTEGRATIONS,
   protocolIntegrationPicked,
 } from "../../../common/integrations/protocolIntegrationPicked";
-import { LocalizeFunc } from "../../../common/translations/localize";
+import type { LocalizeFunc } from "../../../common/translations/localize";
 import {
   hasRejectedItems,
   rejectedItems,
@@ -65,27 +66,31 @@ import "../../../components/ha-icon-button";
 import "../../../components/ha-md-menu-item";
 import "../../../components/ha-sub-menu";
 import "../../../components/ha-svg-icon";
-import { ConfigEntry, getConfigEntries } from "../../../data/config_entries";
+import type { ConfigEntry } from "../../../data/config_entries";
+import { getConfigEntries } from "../../../data/config_entries";
 import { fullEntitiesContext } from "../../../data/context";
-import {
+import type {
   DataTableFiltersItems,
   DataTableFiltersValues,
 } from "../../../data/data_table_filters";
 import { UNAVAILABLE } from "../../../data/entity";
-import {
+import type {
   EntityRegistryEntry,
   UpdateEntityRegistryEntryResult,
-  computeEntityRegistryName,
-  removeEntityRegistryEntry,
-  updateEntityRegistryEntry,
 } from "../../../data/entity_registry";
 import {
-  EntitySources,
-  fetchEntitySourcesWithCache,
-} from "../../../data/entity_sources";
-import { domainToName } from "../../../data/integration";
+  computeEntityRegistryName,
+  updateEntityRegistryEntry,
+} from "../../../data/entity_registry";
+import type { IntegrationManifest } from "../../../data/integration";
 import {
-  LabelRegistryEntry,
+  fetchIntegrationManifests,
+  domainToName,
+} from "../../../data/integration";
+import type { EntitySources } from "../../../data/entity_sources";
+import { fetchEntitySourcesWithCache } from "../../../data/entity_sources";
+import type { LabelRegistryEntry } from "../../../data/label_registry";
+import {
   createLabelRegistryEntry,
   subscribeLabelRegistry,
 } from "../../../data/label_registry";
@@ -131,7 +136,7 @@ export interface EntityRow extends StateEntity {
 export class HaConfigEntities extends SubscribeMixin(LitElement) {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property({ type: Boolean }) public isWide = false;
+  @property({ attribute: "is-wide", type: Boolean }) public isWide = false;
 
   @property({ type: Boolean }) public narrow = false;
 
@@ -140,6 +145,8 @@ export class HaConfigEntities extends SubscribeMixin(LitElement) {
   @state() private _stateEntities: StateEntity[] = [];
 
   @state() private _entries?: ConfigEntry[];
+
+  @state() private _manifests?: IntegrationManifest[];
 
   @state()
   @consume({ context: fullEntitiesContext, subscribe: true })
@@ -687,7 +694,7 @@ export class HaConfigEntities extends SubscribeMixin(LitElement) {
 
     const includeAddDeviceFab =
       filteredDomains.size === 1 &&
-      (PROTOCOL_INTEGRATIONS as ReadonlyArray<string>).includes(
+      (PROTOCOL_INTEGRATIONS as readonly string[]).includes(
         [...filteredDomains][0]
       );
 
@@ -743,7 +750,7 @@ export class HaConfigEntities extends SubscribeMixin(LitElement) {
           "ui.panel.config.entities.picker.search",
           { number: filteredEntities.length }
         )}
-        hasFilters
+        has-filters
         .filters=${
           Object.values(this._filters).filter((filter) =>
             Array.isArray(filter)
@@ -809,7 +816,9 @@ ${
         </ha-assist-chip>`
       : html`<ha-icon-button
           .path=${mdiDotsVertical}
-          .label=${"ui.panel.config.automation.picker.bulk_action"}
+          .label=${this.hass.localize(
+            "ui.panel.config.automation.picker.bulk_action"
+          )}
           slot="trigger"
         ></ha-icon-button>`
   }
@@ -897,7 +906,9 @@ ${
           Array.isArray(this._filters.config_entry) &&
           this._filters.config_entry?.length
             ? html`<ha-alert slot="filter-pane">
-                Filtering by config entry
+                ${this.hass.localize(
+                  "ui.panel.config.entities.picker.filtering_by_config_entry"
+                )}
                 ${this._entries?.find(
                   (entry) => entry.entry_id === this._filters.config_entry![0]
                 )?.title || this._filters.config_entry[0]}
@@ -1069,8 +1080,7 @@ ${
         }
         if (
           changedProps.has("_entitySources") ||
-          (changedProps.has("hass") && !oldHass) ||
-          !oldHass.states[entityId]
+          (changedProps.has("hass") && (!oldHass || !oldHass.states[entityId]))
         ) {
           changed = true;
         }
@@ -1286,11 +1296,46 @@ ${rejected
     });
   }
 
-  private _removeSelected() {
-    const removeableEntities = this._selected.filter((entity) => {
-      const stateObj = this.hass.states[entity];
-      return stateObj?.attributes.restored;
+  private async _removeSelected() {
+    if (!this._entities || !this.hass) {
+      return;
+    }
+
+    const manifestsProm = this._manifests
+      ? undefined
+      : fetchIntegrationManifests(this.hass);
+    const helperDomains = [
+      ...new Set(this._selected.map((s) => computeDomain(s))),
+    ].filter((d) => isHelperDomain(d));
+
+    const configEntriesProm = this._entries
+      ? undefined
+      : this._loadConfigEntries();
+    const domainProms = helperDomains.map((d) =>
+      HELPERS_CRUD[d].fetch(this.hass)
+    );
+    const helpersResult = await Promise.all(domainProms);
+    let fetchedHelpers: Helper[] = [];
+    helpersResult.forEach((r) => {
+      fetchedHelpers = fetchedHelpers.concat(r);
     });
+    if (manifestsProm) {
+      this._manifests = await manifestsProm;
+    }
+    if (configEntriesProm) {
+      await configEntriesProm;
+    }
+
+    const removeableEntities = this._selected.filter((entity_id) =>
+      isDeletableEntity(
+        this.hass,
+        entity_id,
+        this._manifests!,
+        this._entities,
+        this._entries!,
+        fetchedHelpers
+      )
+    );
     showConfirmationDialog(this, {
       title: this.hass.localize(
         `ui.panel.config.entities.picker.delete_selected.confirm_title`
@@ -1311,8 +1356,15 @@ ${rejected
       dismissText: this.hass.localize("ui.common.cancel"),
       destructive: true,
       confirm: () => {
-        removeableEntities.forEach((entity) =>
-          removeEntityRegistryEntry(this.hass, entity)
+        removeableEntities.forEach((entity_id) =>
+          deleteEntity(
+            this.hass,
+            entity_id,
+            this._manifests!,
+            this._entities,
+            this._entries!,
+            fetchedHelpers
+          )
         );
         this._clearSelection();
       },
@@ -1347,7 +1399,7 @@ ${rejected
       );
     if (
       filteredDomains.size === 1 &&
-      (PROTOCOL_INTEGRATIONS as ReadonlyArray<string>).includes(
+      (PROTOCOL_INTEGRATIONS as readonly string[]).includes(
         [...filteredDomains][0]
       )
     ) {

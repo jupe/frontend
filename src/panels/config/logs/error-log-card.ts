@@ -1,12 +1,25 @@
 import "@material/mwc-list/mwc-list-item";
-import { mdiArrowCollapseDown, mdiDownload, mdiRefresh } from "@mdi/js";
+import type { ActionDetail } from "@material/mwc-list";
+
+import {
+  mdiArrowCollapseDown,
+  mdiDotsVertical,
+  mdiCircle,
+  mdiDownload,
+  mdiFormatListNumbered,
+  mdiMenuDown,
+  mdiRefresh,
+  mdiWrap,
+  mdiWrapDisabled,
+  mdiFolderTextOutline,
+} from "@mdi/js";
 import {
   css,
-  CSSResultGroup,
+  type CSSResultGroup,
   html,
   LitElement,
-  PropertyValues,
-  TemplateResult,
+  type PropertyValues,
+  type TemplateResult,
   nothing,
 } from "lit";
 import { classMap } from "lit/directives/class-map";
@@ -22,24 +35,39 @@ import "../../../components/ha-button";
 import "../../../components/ha-icon-button";
 import "../../../components/ha-svg-icon";
 import "../../../components/ha-circular-progress";
+import "../../../components/chips/ha-assist-chip";
+import "../../../components/ha-menu";
+import "../../../components/ha-md-menu-item";
+import "../../../components/ha-md-divider";
+import "../../../components/ha-button-menu";
+import "../../../components/ha-list-item";
 
 import { getSignedPath } from "../../../data/auth";
 
 import { fetchErrorLog, getErrorLogDownloadUrl } from "../../../data/error_log";
 import { extractApiErrorMessage } from "../../../data/hassio/common";
 import {
+  fetchHassioBoots,
   fetchHassioLogs,
   fetchHassioLogsFollow,
+  fetchHassioLogsFollowSkip,
+  fetchHassioLogsLegacy,
+  getHassioLogDownloadLinesUrl,
   getHassioLogDownloadUrl,
 } from "../../../data/hassio/supervisor";
-import { HomeAssistant } from "../../../types";
-import { fileDownload } from "../../../util/file_download";
-import { HASSDomEvent } from "../../../common/dom/fire_event";
-import { ConnectionStatus } from "../../../data/connection-status";
+import type { HomeAssistant } from "../../../types";
+import {
+  downloadFileSupported,
+  fileDownload,
+} from "../../../util/file_download";
+import { fireEvent, type HASSDomEvent } from "../../../common/dom/fire_event";
+import type { ConnectionStatus } from "../../../data/connection-status";
 import { atLeastVersion } from "../../../common/config/version";
 import { isComponentLoaded } from "../../../common/config/is_component_loaded";
 import { debounce } from "../../../common/util/debounce";
 import { showDownloadLogsDialog } from "./show-dialog-download-logs";
+import type { HaMenu } from "../../../components/ha-menu";
+import type { LocalizeFunc } from "../../../common/translations/localize";
 
 const NUMBER_OF_LINES = 100;
 
@@ -47,13 +75,16 @@ const NUMBER_OF_LINES = 100;
 class ErrorLogCard extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
+  @property({ attribute: false }) public localizeFunc?: LocalizeFunc<any>;
+
   @property() public filter = "";
 
   @property() public header?: string;
 
-  @property() public provider!: string;
+  @property() public provider?: string;
 
-  @property({ type: Boolean, attribute: true }) public show = false;
+  @property({ attribute: "allow-switch", type: Boolean }) public allowSwitch =
+    false;
 
   @query(".error-log") private _logElement?: HTMLElement;
 
@@ -63,6 +94,8 @@ class ErrorLogCard extends LitElement {
   private _scrollBottomMarkerElement?: HTMLElement;
 
   @query("ha-ansi-to-html") private _ansiToHtmlElement?: HaAnsiToHtml;
+
+  @query("#boots-menu") private _bootsMenu?: HaMenu;
 
   @state() private _firstCursor?: string;
 
@@ -88,36 +121,162 @@ class ErrorLogCard extends LitElement {
 
   @state() private _loadingPrevState?: "loading" | "end" | "loaded";
 
-  @state() private _noSearchResults: boolean = false;
+  @state() private _noSearchResults = false;
 
   @state() private _numberOfLines?: number;
 
+  @state() private _boot = 0;
+
+  @state() private _boots?: number[];
+
+  @state() private _showBootsSelect = false;
+
+  @state() private _wrapLines = true;
+
+  @state() private _downloadSupported?: boolean;
+
+  @state() private _logsFileLink?: string;
+
   protected render(): TemplateResult {
+    const streaming =
+      this._streamSupported &&
+      this.provider &&
+      isComponentLoaded(this.hass, "hassio") &&
+      this._loadingState !== "loading";
+
+    const hasBoots = this._streamSupported && Array.isArray(this._boots);
+
+    const localize = this.localizeFunc || this.hass.localize;
     return html`
       <div class="error-log-intro">
         ${this._error
           ? html`<ha-alert alert-type="error">${this._error}</ha-alert>`
-          : ""}
-        <ha-card outlined class=${classMap({ hidden: this.show === false })}>
+          : nothing}
+        <ha-card outlined>
           <div class="header">
             <h1 class="card-header">
-              ${this.header ||
-              this.hass.localize("ui.panel.config.logs.show_full_logs")}
+              ${this.header || localize("ui.panel.config.logs.show_full_logs")}
             </h1>
             <div class="action-buttons">
+              ${hasBoots && this._showBootsSelect
+                ? html`
+                    <ha-assist-chip
+                      .title=${localize(
+                        "ui.panel.config.logs.haos_boots_title"
+                      )}
+                      .label=${this._boot === 0
+                        ? localize("ui.panel.config.logs.current")
+                        : this._boot === -1
+                          ? localize("ui.panel.config.logs.previous")
+                          : localize("ui.panel.config.logs.startups_ago", {
+                              boot: this._boot * -1,
+                            })}
+                      id="boots-anchor"
+                      @click=${this._toggleBootsMenu}
+                    >
+                      <ha-svg-icon
+                        slot="trailing-icon"
+                        .path=${mdiMenuDown}
+                      ></ha-svg-icon
+                    ></ha-assist-chip>
+                    <ha-menu
+                      anchor="boots-anchor"
+                      id="boots-menu"
+                      positioning="fixed"
+                    >
+                      ${this._boots!.map(
+                        (boot) => html`
+                          <ha-md-menu-item
+                            .value=${boot}
+                            @click=${this._setBoot}
+                            .selected=${boot === this._boot}
+                          >
+                            ${boot === 0
+                              ? localize("ui.panel.config.logs.current")
+                              : boot === -1
+                                ? localize("ui.panel.config.logs.previous")
+                                : localize(
+                                    "ui.panel.config.logs.startups_ago",
+                                    { boot: boot * -1 }
+                                  )}
+                          </ha-md-menu-item>
+                          ${boot === 0
+                            ? html`<ha-md-divider
+                                role="separator"
+                              ></ha-md-divider>`
+                            : nothing}
+                        `
+                      )}
+                    </ha-menu>
+                  `
+                : nothing}
+              ${this._downloadSupported
+                ? html`
+                    <ha-icon-button
+                      .path=${mdiDownload}
+                      @click=${this._downloadLogs}
+                      .label=${localize("ui.panel.config.logs.download_logs")}
+                    ></ha-icon-button>
+                  `
+                : this._logsFileLink
+                  ? html`
+                      <a
+                        href=${this._logsFileLink}
+                        target="_blank"
+                        class="download-link"
+                      >
+                        <ha-icon-button
+                          .path=${mdiDownload}
+                          .label=${localize(
+                            "ui.panel.config.logs.download_logs"
+                          )}
+                        ></ha-icon-button>
+                      </a>
+                    `
+                  : nothing}
               <ha-icon-button
-                .path=${mdiDownload}
-                @click=${this._downloadFullLog}
-                .label=${this.hass.localize(
-                  "ui.panel.config.logs.download_full_log"
+                .path=${this._wrapLines ? mdiWrapDisabled : mdiWrap}
+                @click=${this._toggleLineWrap}
+                .label=${localize(
+                  `ui.panel.config.logs.${this._wrapLines ? "full_width" : "wrap_lines"}`
                 )}
               ></ha-icon-button>
-              ${!this._streamSupported || this._error
+              ${!streaming || this._error
                 ? html`<ha-icon-button
                     .path=${mdiRefresh}
                     @click=${this._loadLogs}
-                    .label=${this.hass.localize("ui.common.refresh")}
+                    .label=${localize("ui.common.refresh")}
                   ></ha-icon-button>`
+                : nothing}
+              ${(this.allowSwitch && this.provider === "core") || hasBoots
+                ? html`
+                    <ha-button-menu @action=${this._handleOverflowAction}>
+                      <ha-icon-button slot="trigger" .path=${mdiDotsVertical}>
+                      </ha-icon-button>
+                      ${this.allowSwitch && this.provider === "core"
+                        ? html`<ha-list-item graphic="icon">
+                            <ha-svg-icon
+                              slot="graphic"
+                              .path=${mdiFolderTextOutline}
+                            ></ha-svg-icon>
+                            ${this.hass.localize(
+                              "ui.panel.config.logs.show_condensed_logs"
+                            )}
+                          </ha-list-item>`
+                        : nothing}
+                      ${hasBoots
+                        ? html`<ha-list-item graphic="icon">
+                            <ha-svg-icon
+                              slot="graphic"
+                              .path=${mdiFormatListNumbered}
+                            ></ha-svg-icon>
+                            ${localize(
+                              `ui.panel.config.logs.${this._showBootsSelect ? "hide" : "show"}_haos_boots`
+                            )}
+                          </ha-list-item>`
+                        : nothing}
+                    </ha-button-menu>
+                  `
                 : nothing}
             </div>
           </div>
@@ -131,25 +290,22 @@ class ErrorLogCard extends LitElement {
                 </div>`
               : nothing}
             ${this._loadingState === "loading"
-              ? html`<div>
-                  ${this.hass.localize("ui.panel.config.logs.loading_log")}
-                </div>`
+              ? html`<div>${localize("ui.panel.config.logs.loading_log")}</div>`
               : this._loadingState === "empty"
-                ? html`<div>
-                    ${this.hass.localize("ui.panel.config.logs.no_errors")}
-                  </div>`
+                ? html`<div>${localize("ui.panel.config.logs.no_errors")}</div>`
                 : nothing}
             ${this._loadingState === "loaded" &&
             this.filter &&
             this._noSearchResults
               ? html`<div>
-                  ${this.hass.localize(
-                    "ui.panel.config.logs.no_issues_search",
-                    { term: this.filter }
-                  )}
+                  ${localize("ui.panel.config.logs.no_issues_search", {
+                    term: this.filter,
+                  })}
                 </div>`
               : nothing}
-            <ha-ansi-to-html></ha-ansi-to-html>
+            <ha-ansi-to-html
+              ?wrap-disabled=${!this._wrapLines}
+            ></ha-ansi-to-html>
             <div id="scroll-bottom-marker"></div>
           </div>
           <ha-button
@@ -165,37 +321,44 @@ class ErrorLogCard extends LitElement {
               .path=${mdiArrowCollapseDown}
               slot="icon"
             ></ha-svg-icon>
-            ${this.hass.localize("ui.panel.config.logs.scroll_down_button")}
+            ${localize("ui.panel.config.logs.scroll_down_button")}
             <ha-svg-icon
               .path=${mdiArrowCollapseDown}
               slot="trailingIcon"
             ></ha-svg-icon>
           </ha-button>
+          ${streaming && this._boot === 0 && !this._error
+            ? html`<div class="live-indicator">
+                <ha-svg-icon path=${mdiCircle}></ha-svg-icon>
+                Live
+              </div>`
+            : nothing}
         </ha-card>
-        ${this.show === false
-          ? html`
-              <ha-button outlined @click=${this._downloadFullLog}>
-                <ha-svg-icon .path=${mdiDownload}></ha-svg-icon>
-                ${this.hass.localize("ui.panel.config.logs.download_full_log")}
-              </ha-button>
-              <mwc-button raised @click=${this._showLogs}>
-                ${this.hass.localize("ui.panel.config.logs.load_logs")}
-              </mwc-button>
-            `
-          : ""}
       </div>
     `;
   }
 
-  public connectedCallback() {
-    super.connectedCallback();
+  protected willUpdate(changedProps: PropertyValues) {
+    super.willUpdate(changedProps);
+    if (!this.hasUpdated) {
+      this._downloadSupported = downloadFileSupported(this.hass);
+      this._streamSupported =
+        !__SUPERVISOR__ || atLeastVersion(this.hass.config.version, 2024, 11);
 
-    if (this._streamSupported === undefined) {
-      this._streamSupported = atLeastVersion(
-        this.hass.config.version,
-        2024,
-        11
+      // just needs to be loaded once, because only the host endpoints provide boots information
+      this._loadBoots();
+
+      window.addEventListener(
+        "connection-status",
+        this._handleConnectionStatus
       );
+
+      this.hass.loadFragmentTranslation("config");
+    }
+
+    if (changedProps.has("provider")) {
+      this._boot = 0;
+      this._loadLogs();
     }
   }
 
@@ -206,23 +369,10 @@ class ErrorLogCard extends LitElement {
 
     this._scrolledToTopController.callback = this._handleTopScroll;
     this._scrolledToTopController.observe(this._scrollTopMarkerElement!);
-
-    window.addEventListener("connection-status", this._handleConnectionStatus);
-
-    if (this.hass?.config.recovery_mode || this.show) {
-      this.hass.loadFragmentTranslation("config");
-    }
   }
 
   protected updated(changedProps) {
     super.updated(changedProps);
-
-    if (
-      (changedProps.has("show") && this.show) ||
-      (changedProps.has("provider") && this.show)
-    ) {
-      this._loadLogs();
-    }
 
     if (this._newLogsIndicator && this._scrolledToBottomController.value) {
       this._newLogsIndicator = false;
@@ -256,12 +406,13 @@ class ErrorLogCard extends LitElement {
     );
   }
 
-  private async _downloadFullLog(): Promise<void> {
-    if (this._streamSupported) {
+  private async _downloadLogs(): Promise<void> {
+    if (this._streamSupported && this.provider) {
       showDownloadLogsDialog(this, {
         header: this.header,
         provider: this.provider,
         defaultLineCount: this._numberOfLines,
+        boot: this._boot,
       });
     } else {
       const timeString = new Date().toISOString().replace(/:/g, "-");
@@ -278,36 +429,66 @@ class ErrorLogCard extends LitElement {
     }
   }
 
-  private _showLogs(): void {
-    this.show = true;
-  }
-
-  private async _loadLogs(): Promise<void> {
+  private async _loadLogs(retry = false): Promise<void> {
     this._error = undefined;
     this._loadingState = "loading";
-    this._loadingPrevState = undefined;
-    this._firstCursor = undefined;
-    this._numberOfLines = 0;
-    this._ansiToHtmlElement?.clear();
+    this._numberOfLines = retry ? (this._numberOfLines ?? 0) : 0;
+
+    if (!retry) {
+      this._loadingPrevState = undefined;
+      this._firstCursor = undefined;
+      this._ansiToHtmlElement?.clear();
+    }
+
+    const streamLogs =
+      this._streamSupported &&
+      isComponentLoaded(this.hass, "hassio") &&
+      this.provider;
 
     try {
       if (this._logStreamAborter) {
         this._logStreamAborter.abort();
+        this._logStreamAborter = undefined;
       }
 
-      this._logStreamAborter = new AbortController();
+      if (streamLogs) {
+        this._logStreamAborter = new AbortController();
 
-      if (
-        this._streamSupported &&
-        isComponentLoaded(this.hass, "hassio") &&
-        this.provider
-      ) {
-        const response = await fetchHassioLogsFollow(
-          this.hass,
-          this.provider,
-          this._logStreamAborter.signal,
-          NUMBER_OF_LINES
-        );
+        if (!retry) {
+          // check if there are any logs at all
+          const testResponse = await fetchHassioLogs(
+            this.hass,
+            this.provider!,
+            `entries=:-1:`,
+            this._boot
+          );
+          const testLogs = await testResponse.text();
+          if (!testLogs.trim()) {
+            this._loadingState = "empty";
+          }
+        }
+
+        let response: Response;
+
+        if (retry && this._firstCursor) {
+          response = await fetchHassioLogsFollowSkip(
+            this.hass,
+            this.provider!,
+            this._logStreamAborter.signal,
+            this._firstCursor,
+            this._numberOfLines,
+            NUMBER_OF_LINES,
+            this._boot
+          );
+        } else {
+          response = await fetchHassioLogsFollow(
+            this.hass,
+            this.provider!,
+            this._logStreamAborter.signal,
+            NUMBER_OF_LINES,
+            this._boot
+          );
+        }
 
         if (response.headers.has("X-First-Cursor")) {
           this._firstCursor = response.headers.get("X-First-Cursor")!;
@@ -361,6 +542,20 @@ class ErrorLogCard extends LitElement {
             } else {
               this._newLogsIndicator = true;
             }
+
+            if (!this._downloadSupported) {
+              const downloadUrl = getHassioLogDownloadLinesUrl(
+                this.provider!,
+                this._numberOfLines,
+                this._boot
+              );
+              getSignedPath(this.hass, downloadUrl).then((signedUrl) => {
+                this._logsFileLink = signedUrl.path;
+              });
+            }
+
+            // first chunk loads successfully, reset retry param
+            retry = false;
           }
         }
       } else {
@@ -368,8 +563,7 @@ class ErrorLogCard extends LitElement {
         this._streamSupported = false;
         let logs = "";
         if (isComponentLoaded(this.hass, "hassio") && this.provider) {
-          const repsonse = await fetchHassioLogs(this.hass, this.provider);
-          logs = await repsonse.text();
+          logs = await fetchHassioLogsLegacy(this.hass, this.provider);
         } else {
           logs = await fetchErrorLog(this.hass);
         }
@@ -384,10 +578,20 @@ class ErrorLogCard extends LitElement {
       if (err.name === "AbortError") {
         return;
       }
-      this._error = this.hass.localize("ui.panel.config.logs.failed_get_logs", {
-        provider: this.provider,
-        error: extractApiErrorMessage(err),
-      });
+
+      // The stream can fail if the connection is lost or firefox service worker intercept the connection
+      if (!retry && streamLogs) {
+        this._loadLogs(true);
+        return;
+      }
+
+      this._error = (this.localizeFunc || this.hass.localize)(
+        "ui.panel.config.logs.failed_get_logs",
+        {
+          provider: this.provider,
+          error: extractApiErrorMessage(err),
+        }
+      );
     }
   }
 
@@ -417,60 +621,64 @@ class ErrorLogCard extends LitElement {
   private _handleConnectionStatus = (ev: HASSDomEvent<ConnectionStatus>) => {
     if (ev.detail === "disconnected" && this._logStreamAborter) {
       this._logStreamAborter.abort();
+      this._loadingState = "loading";
     }
-    if (ev.detail === "connected" && this.show) {
-      this._loadLogs();
+    if (ev.detail === "connected") {
+      this._loadLogs(true);
     }
   };
 
   private async _loadMoreLogs() {
     if (
-      this._firstCursor &&
-      this._loadingPrevState !== "loading" &&
-      this._loadingState === "loaded" &&
-      this._logElement
+      !this._firstCursor ||
+      this._loadingPrevState === "loading" ||
+      this._loadingState !== "loaded" ||
+      !this._logElement ||
+      !this.provider
     ) {
-      const scrolledToBottom = this._scrolledToBottomController.value;
-      const scrollPositionFromBottom =
-        this._logElement.scrollHeight - this._logElement.scrollTop;
-      this._loadingPrevState = "loading";
-      const response = await fetchHassioLogs(
-        this.hass,
-        this.provider,
-        `entries=${this._firstCursor}:-100:100`
-      );
+      return;
+    }
+    const scrolledToBottom = this._scrolledToBottomController.value;
+    const scrollPositionFromBottom =
+      this._logElement.scrollHeight - this._logElement.scrollTop;
+    this._loadingPrevState = "loading";
+    const response = await fetchHassioLogs(
+      this.hass,
+      this.provider,
+      `entries=${this._firstCursor}:-100:100`,
+      this._boot
+    );
 
-      if (response.headers.has("X-First-Cursor")) {
-        if (this._firstCursor === response.headers.get("X-First-Cursor")!) {
-          this._loadingPrevState = "end";
-          return;
-        }
-        this._firstCursor = response.headers.get("X-First-Cursor")!;
-      }
-
-      const body = await response.text();
-
-      if (body) {
-        const lines = body
-          .split("\n")
-          .filter((line) => line.trim() !== "")
-          .reverse();
-
-        this._ansiToHtmlElement?.parseLinesToColoredPre(lines, true);
-        this._numberOfLines! += lines.length;
-        this._loadingPrevState = "loaded";
-      } else {
+    if (response.headers.has("X-First-Cursor")) {
+      if (this._firstCursor === response.headers.get("X-First-Cursor")!) {
         this._loadingPrevState = "end";
+        return;
       }
+      this._firstCursor = response.headers.get("X-First-Cursor")!;
+    }
 
-      if (scrolledToBottom) {
-        this._scrollToBottom();
-      } else if (this._loadingPrevState !== "end" && this._logElement) {
-        window.requestAnimationFrame(() => {
-          this._logElement!.scrollTop =
-            this._logElement!.scrollHeight - scrollPositionFromBottom;
-        });
-      }
+    const body = await response.text();
+
+    if (body) {
+      const lines = body
+        .split("\n")
+        .filter((line) => line.trim() !== "")
+        .reverse();
+
+      this._ansiToHtmlElement?.parseLinesToColoredPre(lines, true);
+      this._numberOfLines! += lines.length;
+      this._loadingPrevState = "loaded";
+    } else {
+      this._loadingPrevState = "end";
+    }
+
+    if (scrolledToBottom) {
+      this._scrollToBottom();
+    } else if (this._loadingPrevState !== "end" && this._logElement) {
+      window.requestAnimationFrame(() => {
+        this._logElement!.scrollTop =
+          this._logElement!.scrollHeight - scrollPositionFromBottom;
+      });
     }
   }
 
@@ -488,7 +696,60 @@ class ErrorLogCard extends LitElement {
     return isVisible;
   };
 
+  private async _loadBoots() {
+    if (this._streamSupported && isComponentLoaded(this.hass, "hassio")) {
+      try {
+        const { data } = await fetchHassioBoots(this.hass);
+        const boots = Object.keys(data.boots)
+          .map(Number)
+          .sort((a, b) => b - a);
+
+        // only show boots select when there are more than one boot
+        if (boots.length > 1) {
+          this._boots = boots;
+        }
+      } catch (err: any) {
+        // eslint-disable-next-line no-console
+        console.error(err);
+      }
+    }
+  }
+
+  private _toggleLineWrap() {
+    this._wrapLines = !this._wrapLines;
+  }
+
+  private _handleOverflowAction(ev: CustomEvent<ActionDetail>) {
+    let index = ev.detail.index;
+    if (this.provider === "core") {
+      index--;
+    }
+    switch (index) {
+      case -1:
+        // @ts-ignore
+        fireEvent(this, "switch-log-view");
+        break;
+      case 0:
+        this._showBootsSelect = !this._showBootsSelect;
+        break;
+    }
+  }
+
+  private _toggleBootsMenu() {
+    if (this._bootsMenu) {
+      this._bootsMenu.open = !this._bootsMenu.open;
+    }
+  }
+
+  private _setBoot(ev: any) {
+    this._boot = ev.target.value;
+    this._loadLogs();
+  }
+
   static styles: CSSResultGroup = css`
+    :host {
+      direction: var(--direction);
+    }
     .error-log-intro {
       text-align: center;
       margin: 16px;
@@ -538,14 +799,14 @@ class ErrorLogCard extends LitElement {
       position: relative;
       font-family: var(--code-font-family, monospace);
       clear: both;
-      text-align: left;
+      text-align: start;
       padding-top: 12px;
       padding-bottom: 12px;
       overflow-y: scroll;
       min-height: var(--error-log-card-height, calc(100vh - 240px));
       max-height: var(--error-log-card-height, calc(100vh - 240px));
-
       border-top: 1px solid var(--divider-color);
+      direction: ltr;
     }
 
     @media all and (max-width: 870px) {
@@ -599,6 +860,41 @@ class ErrorLogCard extends LitElement {
       width: 100%;
       justify-content: center;
       padding: 16px;
+    }
+
+    ha-assist-chip {
+      --ha-assist-chip-container-shape: 10px;
+      --md-assist-chip-trailing-space: 8px;
+    }
+
+    @keyframes breathe {
+      from {
+        opacity: 0.8;
+      }
+      to {
+        opacity: 0;
+      }
+    }
+
+    .live-indicator {
+      position: absolute;
+      bottom: 0;
+      inset-inline-end: 16px;
+      border-top-right-radius: 8px;
+      border-top-left-radius: 8px;
+      background-color: var(--primary-color);
+      color: var(--text-primary-color);
+      padding: 4px 8px;
+      opacity: 0.8;
+    }
+    .live-indicator ha-svg-icon {
+      animation: breathe 1s cubic-bezier(0.5, 0, 1, 1) infinite alternate;
+      height: 14px;
+      width: 14px;
+    }
+
+    .download-link {
+      color: var(--text-color);
     }
   `;
 }

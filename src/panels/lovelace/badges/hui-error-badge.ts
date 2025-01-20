@@ -1,13 +1,13 @@
 import { mdiAlertCircle } from "@mdi/js";
 import { dump } from "js-yaml";
-import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators";
 import "../../../components/ha-badge";
 import "../../../components/ha-svg-icon";
-import { HomeAssistant } from "../../../types";
+import type { HomeAssistant } from "../../../types";
 import { showAlertDialog } from "../custom-card-helpers";
-import { LovelaceBadge } from "../types";
-import { ErrorBadgeConfig } from "./types";
+import type { LovelaceBadge } from "../types";
+import type { ErrorBadgeConfig } from "./types";
 
 export const createErrorBadgeElement = (config) => {
   const el = document.createElement("hui-error-badge");
@@ -36,7 +36,7 @@ export class HuiErrorBadge extends LitElement implements LovelaceBadge {
     if (this._config!.origConfig) {
       try {
         dumped = dump(this._config!.origConfig);
-      } catch (err: any) {
+      } catch (_err: any) {
         dumped = `[Error dumping ${this._config!.origConfig}]`;
       }
     }
@@ -66,25 +66,23 @@ export class HuiErrorBadge extends LitElement implements LovelaceBadge {
     `;
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      ha-badge {
-        --badge-color: var(--error-color);
-        --ha-card-border-color: var(--error-color);
-      }
-      .content {
-        max-width: 100px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      pre {
-        font-family: var(--code-font-family, monospace);
-        white-space: break-spaces;
-        user-select: text;
-      }
-    `;
-  }
+  static styles = css`
+    ha-badge {
+      --badge-color: var(--error-color);
+      --ha-card-border-color: var(--error-color);
+    }
+    .content {
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    pre {
+      font-family: var(--code-font-family, monospace);
+      white-space: break-spaces;
+      user-select: text;
+    }
+  `;
 }
 
 declare global {

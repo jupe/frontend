@@ -1,12 +1,13 @@
 import "@material/mwc-button";
-import { CSSResultGroup, html, LitElement, PropertyValues, nothing } from "lit";
+import type { CSSResultGroup, PropertyValues } from "lit";
+import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
 import { fireEvent } from "../../common/dom/fire_event";
-import { DataEntryFlowStepAbort } from "../../data/data_entry_flow";
+import type { DataEntryFlowStepAbort } from "../../data/data_entry_flow";
 import { showAddApplicationCredentialDialog } from "../../panels/config/application_credentials/show-dialog-add-application-credential";
-import { HomeAssistant } from "../../types";
+import type { HomeAssistant } from "../../types";
 import { showConfigFlowDialog } from "./show-dialog-config-flow";
-import { DataEntryFlowDialogParams } from "./show-dialog-data-entry-flow";
+import type { DataEntryFlowDialogParams } from "./show-dialog-data-entry-flow";
 import { configFlowContentStyles } from "./styles";
 
 @customElement("step-flow-abort")
@@ -50,7 +51,6 @@ class StepFlowAbort extends LitElement {
   }
 
   private async _handleMissingCreds() {
-    this._flowDone();
     // Prompt to enter credentials and restart integration setup
     showAddApplicationCredentialDialog(this.params.dialogParentElement!, {
       selectedDomain: this.domain,
@@ -63,6 +63,7 @@ class StepFlowAbort extends LitElement {
         });
       },
     });
+    this._flowDone();
   }
 
   private _flowDone(): void {

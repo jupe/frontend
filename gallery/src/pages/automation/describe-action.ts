@@ -3,11 +3,11 @@ import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import "../../../../src/components/ha-card";
 import "../../../../src/components/ha-yaml-editor";
-import { Action } from "../../../../src/data/script";
+import type { Action } from "../../../../src/data/script";
 import { describeAction } from "../../../../src/data/script_i18n";
 import { getEntity } from "../../../../src/fake_data/entity";
 import { provideHass } from "../../../../src/fake_data/provide_hass";
-import { HomeAssistant } from "../../../../src/types";
+import type { HomeAssistant } from "../../../../src/types";
 
 const ENTITIES = [
   getEntity("scene", "kitchen_morning", "scening", {
@@ -177,26 +177,24 @@ export class DemoAutomationDescribeAction extends LitElement {
     this._action = ev.detail.isValid ? ev.detail.value : undefined;
   }
 
-  static get styles() {
-    return css`
-      ha-card {
-        max-width: 600px;
-        margin: 24px auto;
-      }
-      .action {
-        padding: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-      span {
-        margin-right: 16px;
-      }
-      ha-yaml-editor {
-        width: 50%;
-      }
-    `;
-  }
+  static styles = css`
+    ha-card {
+      max-width: 600px;
+      margin: 24px auto;
+    }
+    .action {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    span {
+      margin-right: 16px;
+    }
+    ha-yaml-editor {
+      width: 50%;
+    }
+  `;
 }
 
 declare global {

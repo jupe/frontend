@@ -1,15 +1,9 @@
 import { mdiClose, mdiMagnify } from "@mdi/js";
-import {
-  CSSResultGroup,
-  LitElement,
-  TemplateResult,
-  css,
-  html,
-  nothing,
-} from "lit";
+import type { TemplateResult } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, query } from "lit/decorators";
 import { fireEvent } from "../common/dom/fire_event";
-import { HomeAssistant } from "../types";
+import type { HomeAssistant } from "../types";
 import "./ha-icon-button";
 import "./ha-outlined-text-field";
 import type { HaOutlinedTextField } from "./ha-outlined-text-field";
@@ -24,8 +18,8 @@ class SearchInputOutlined extends LitElement {
   @property({ type: Boolean })
   public suffix = false;
 
-  @property({ type: Boolean })
-  public autofocus = false;
+  // eslint-disable-next-line lit/no-native-attributes
+  @property({ type: Boolean }) public autofocus = false;
 
   @property({ type: String })
   public label?: string;
@@ -86,29 +80,27 @@ class SearchInputOutlined extends LitElement {
     this._filterChanged("");
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      :host {
-        display: inline-flex;
-        /* For iOS */
-        z-index: 0;
-        --mdc-icon-button-size: 24px;
-      }
-      ha-outlined-text-field {
-        display: block;
-        width: 100%;
-        --ha-outlined-field-container-color: var(--card-background-color);
-      }
-      ha-svg-icon,
-      ha-icon-button {
-        display: flex;
-        color: var(--primary-text-color);
-      }
-      ha-svg-icon {
-        outline: none;
-      }
-    `;
-  }
+  static styles = css`
+    :host {
+      display: inline-flex;
+      /* For iOS */
+      z-index: 0;
+      --mdc-icon-button-size: 24px;
+    }
+    ha-outlined-text-field {
+      display: block;
+      width: 100%;
+      --ha-outlined-field-container-color: var(--card-background-color);
+    }
+    ha-svg-icon,
+    ha-icon-button {
+      display: flex;
+      color: var(--primary-text-color);
+    }
+    ha-svg-icon {
+      outline: none;
+    }
+  `;
 }
 
 declare global {

@@ -3,10 +3,10 @@ import { css, html, LitElement } from "lit";
 import { customElement } from "lit/decorators";
 import { formatDateNumeric } from "../../../../src/common/datetime/format_date";
 import "../../../../src/components/ha-card";
+import type { FrontendLocaleData } from "../../../../src/data/translation";
 import {
   DateFormat,
   FirstWeekday,
-  FrontendLocaleData,
   NumberFormat,
   TimeFormat,
   TimeZone,
@@ -90,28 +90,26 @@ export class DemoDateTimeDate extends LitElement {
     `;
   }
 
-  static get styles() {
-    return css`
-      .header {
-        font-weight: bold;
-      }
-      .center {
-        text-align: center;
-      }
-      .container {
-        max-width: 600px;
-        margin: 12px auto;
-        display: flex;
-        align-items: center;
-        justify-content: space-evenly;
-      }
+  static styles = css`
+    .header {
+      font-weight: bold;
+    }
+    .center {
+      text-align: center;
+    }
+    .container {
+      max-width: 600px;
+      margin: 12px auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-evenly;
+    }
 
-      .container > div {
-        flex-grow: 1;
-        width: 20%;
-      }
-    `;
-  }
+    .container > div {
+      flex-grow: 1;
+      width: 20%;
+    }
+  `;
 }
 
 declare global {

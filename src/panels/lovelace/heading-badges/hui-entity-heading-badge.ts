@@ -1,6 +1,6 @@
 import { mdiAlertCircle } from "@mdi/js";
-import { HassEntity } from "home-assistant-js-websocket";
-import { CSSResultGroup, LitElement, css, html, nothing } from "lit";
+import type { HassEntity } from "home-assistant-js-websocket";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { styleMap } from "lit/directives/style-map";
 import memoizeOne from "memoize-one";
@@ -11,15 +11,18 @@ import { stateActive } from "../../../common/entity/state_active";
 import { stateColorCss } from "../../../common/entity/state_color";
 import "../../../components/ha-heading-badge";
 import "../../../components/ha-state-icon";
-import { ActionHandlerEvent } from "../../../data/lovelace/action_handler";
+import type { ActionHandlerEvent } from "../../../data/lovelace/action_handler";
 import "../../../state-display/state-display";
-import { HomeAssistant } from "../../../types";
+import type { HomeAssistant } from "../../../types";
 import { actionHandler } from "../common/directives/action-handler-directive";
 import { handleAction } from "../common/handle-action";
 import { hasAction } from "../common/has-action";
 import { DEFAULT_CONFIG } from "../editor/heading-badge-editor/hui-entity-heading-badge-editor";
-import { LovelaceHeadingBadge, LovelaceHeadingBadgeEditor } from "../types";
-import { EntityHeadingBadgeConfig } from "./types";
+import type {
+  LovelaceHeadingBadge,
+  LovelaceHeadingBadgeEditor,
+} from "../types";
+import type { EntityHeadingBadgeConfig } from "./types";
 
 @customElement("hui-entity-heading-badge")
 export class HuiEntityHeadingBadge
@@ -160,19 +163,17 @@ export class HuiEntityHeadingBadge
     `;
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      [role="button"] {
-        cursor: pointer;
-      }
-      ha-heading-badge {
-        --state-inactive-color: initial;
-      }
-      ha-heading-badge.error {
-        --icon-color: var(--red-color);
-      }
-    `;
-  }
+  static styles = css`
+    [role="button"] {
+      cursor: pointer;
+    }
+    ha-heading-badge {
+      --state-inactive-color: initial;
+    }
+    ha-heading-badge.error {
+      --icon-color: var(--red-color);
+    }
+  `;
 }
 
 declare global {

@@ -1,5 +1,6 @@
-import { HassEntity } from "home-assistant-js-websocket";
-import { css, CSSResultGroup, html, LitElement, TemplateResult } from "lit";
+import type { HassEntity } from "home-assistant-js-websocket";
+import type { TemplateResult } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators";
 import { debounce } from "../common/util/debounce";
 import "../components/entity/state-info";
@@ -7,7 +8,7 @@ import "../components/ha-slider";
 import "../components/ha-textfield";
 import { isUnavailableState } from "../data/entity";
 import { setValue } from "../data/input_text";
-import { HomeAssistant } from "../types";
+import type { HomeAssistant } from "../types";
 
 @customElement("state-card-input_number")
 class StateCardInputNumber extends LitElement {
@@ -15,7 +16,7 @@ class StateCardInputNumber extends LitElement {
 
   @property({ attribute: false }) public stateObj!: HassEntity;
 
-  @property({ type: Boolean }) public inDialog = false;
+  @property({ attribute: "in-dialog", type: Boolean }) public inDialog = false;
 
   private _loaded?: boolean;
 
@@ -87,30 +88,28 @@ class StateCardInputNumber extends LitElement {
     `;
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      :host {
-        display: flex;
-      }
-      .flex {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        flex-grow: 2;
-      }
-      .state {
-        min-width: 45px;
-        text-align: end;
-      }
-      ha-textfield {
-        text-align: end;
-      }
-      ha-slider {
-        width: 100%;
-        max-width: 200px;
-      }
-    `;
-  }
+  static styles = css`
+    :host {
+      display: flex;
+    }
+    .flex {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-grow: 2;
+    }
+    .state {
+      min-width: 45px;
+      text-align: end;
+    }
+    ha-textfield {
+      text-align: end;
+    }
+    ha-slider {
+      width: 100%;
+      max-width: 200px;
+    }
+  `;
 
   private async _initialLoad(): Promise<void> {
     this._loaded = true;

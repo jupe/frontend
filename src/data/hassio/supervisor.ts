@@ -1,9 +1,10 @@
 import { atLeastVersion } from "../../common/config/version";
-import { HomeAssistant, PanelInfo } from "../../types";
-import { SupervisorArch } from "../supervisor/supervisor";
-import { hassioApiResultExtractor, HassioResponse } from "./common";
+import type { HomeAssistant, PanelInfo } from "../../types";
+import type { SupervisorArch } from "../supervisor/supervisor";
+import type { HassioResponse } from "./common";
+import { hassioApiResultExtractor } from "./common";
 
-export type HassioHomeAssistantInfo = {
+export interface HassioHomeAssistantInfo {
   arch: SupervisorArch;
   audio_input: string | null;
   audio_output: string | null;
@@ -18,9 +19,9 @@ export type HassioHomeAssistantInfo = {
   version: string;
   wait_boot: number;
   watchdog: boolean;
-};
+}
 
-export type HassioSupervisorInfo = {
+export interface HassioSupervisorInfo {
   addons: string[];
   addons_repositories: string[];
   arch: SupervisorArch;
@@ -37,9 +38,9 @@ export type HassioSupervisorInfo = {
   version: string;
   version_latest: string;
   wait_boot: number;
-};
+}
 
-export type HassioInfo = {
+export interface HassioInfo {
   arch: SupervisorArch;
   channel: string;
   docker: string;
@@ -63,7 +64,11 @@ export type HassioInfo = {
   supported: boolean;
   supported_arch: SupervisorArch[];
   timezone: string;
-};
+}
+
+export interface HassioBoots {
+  boots: Record<number, string>;
+}
 
 export type HassioPanelInfo = PanelInfo<
   | undefined
@@ -177,14 +182,27 @@ export const fetchHassioInfo = async (
   );
 };
 
+export const fetchHassioBoots = async (hass: HomeAssistant) =>
+  hass.callApi<HassioResponse<HassioBoots>>("GET", `hassio/host/logs/boots`);
+
+export const fetchHassioLogsLegacy = async (
+  hass: HomeAssistant,
+  provider: string
+) =>
+  hass.callApi<string>(
+    "GET",
+    `hassio/${provider.includes("_") ? `addons/${provider}` : provider}/logs`
+  );
+
 export const fetchHassioLogs = async (
   hass: HomeAssistant,
   provider: string,
-  range?: string
+  range?: string,
+  boot = 0
 ) =>
   hass.callApiRaw(
     "GET",
-    `hassio/${provider.includes("_") ? `addons/${provider}` : provider}/logs`,
+    `hassio/${provider.includes("_") ? `addons/${provider}` : provider}/logs${boot !== 0 ? `/boots/${boot}` : ""}`,
     undefined,
     range
       ? {
@@ -197,13 +215,33 @@ export const fetchHassioLogsFollow = async (
   hass: HomeAssistant,
   provider: string,
   signal: AbortSignal,
-  lines = 100
+  lines = 100,
+  boot = 0
 ) =>
   hass.callApiRaw(
     "GET",
-    `hassio/${provider.includes("_") ? `addons/${provider}` : provider}/logs/follow?lines=${lines}`,
+    `hassio/${provider.includes("_") ? `addons/${provider}` : provider}/logs${boot !== 0 ? `/boots/${boot}` : ""}/follow?lines=${lines}`,
     undefined,
     undefined,
+    signal
+  );
+
+export const fetchHassioLogsFollowSkip = async (
+  hass: HomeAssistant,
+  provider: string,
+  signal: AbortSignal,
+  cursor: string,
+  skipLines: number,
+  lines = 100,
+  boot = 0
+) =>
+  hass.callApiRaw(
+    "GET",
+    `hassio/${provider.includes("_") ? `addons/${provider}` : provider}/logs${boot !== 0 ? `/boots/${boot}` : ""}/follow`,
+    undefined,
+    {
+      Range: `entries=${cursor}:${skipLines}:${lines}`,
+    },
     signal
   );
 
@@ -212,10 +250,14 @@ export const getHassioLogDownloadUrl = (provider: string) =>
     provider.includes("_") ? `addons/${provider}` : provider
   }/logs`;
 
-export const getHassioLogDownloadLinesUrl = (provider: string, lines: number) =>
+export const getHassioLogDownloadLinesUrl = (
+  provider: string,
+  lines: number,
+  boot = 0
+) =>
   `/api/hassio/${
     provider.includes("_") ? `addons/${provider}` : provider
-  }/logs?lines=${lines}`;
+  }/logs${boot !== 0 ? `/boots/${boot}` : ""}?lines=${lines}`;
 
 export const setSupervisorOption = async (
   hass: HomeAssistant,

@@ -4,10 +4,10 @@ import { customElement, state } from "lit/decorators";
 import { formatTime } from "../../../../src/common/datetime/format_time";
 import "../../../../src/components/ha-card";
 import "../../../../src/components/ha-control-select";
+import type { FrontendLocaleData } from "../../../../src/data/translation";
 import {
   DateFormat,
   FirstWeekday,
-  FrontendLocaleData,
   NumberFormat,
   TimeFormat,
   TimeZone,
@@ -100,32 +100,30 @@ export class DemoDateTimeTime extends LitElement {
     `;
   }
 
-  static get styles() {
-    return css`
-      ha-control-select {
-        max-width: 800px;
-        margin: 12px auto;
-      }
-      .header {
-        font-weight: bold;
-      }
-      .center {
-        text-align: center;
-      }
-      .container {
-        max-width: 600px;
-        margin: 12px auto;
-        display: flex;
-        align-items: center;
-        justify-content: space-evenly;
-      }
+  static styles = css`
+    ha-control-select {
+      max-width: 800px;
+      margin: 12px auto;
+    }
+    .header {
+      font-weight: bold;
+    }
+    .center {
+      text-align: center;
+    }
+    .container {
+      max-width: 600px;
+      margin: 12px auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-evenly;
+    }
 
-      .container > div {
-        flex-grow: 1;
-        width: 20%;
-      }
-    `;
-  }
+    .container > div {
+      flex-grow: 1;
+      width: 20%;
+    }
+  `;
 }
 
 declare global {

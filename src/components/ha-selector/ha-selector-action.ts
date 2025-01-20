@@ -1,10 +1,11 @@
-import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
 import memoizeOne from "memoize-one";
-import { Action, migrateAutomationAction } from "../../data/script";
-import { ActionSelector } from "../../data/selector";
+import type { Action } from "../../data/script";
+import { migrateAutomationAction } from "../../data/script";
+import type { ActionSelector } from "../../data/selector";
 import "../../panels/config/automation/action/ha-automation-action";
-import { HomeAssistant } from "../../types";
+import type { HomeAssistant } from "../../types";
 
 @customElement("ha-selector-action")
 export class HaActionSelector extends LitElement {
@@ -32,24 +33,21 @@ export class HaActionSelector extends LitElement {
         .disabled=${this.disabled}
         .actions=${this._actions(this.value)}
         .hass=${this.hass}
-        .path=${this.selector.action?.path}
       ></ha-automation-action>
     `;
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      ha-automation-action {
-        display: block;
-        margin-bottom: 16px;
-      }
-      label {
-        display: block;
-        margin-bottom: 4px;
-        font-weight: 500;
-      }
-    `;
-  }
+  static styles = css`
+    ha-automation-action {
+      display: block;
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+  `;
 }
 
 declare global {

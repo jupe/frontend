@@ -1,17 +1,17 @@
 import deepClone from "deep-clone-simple";
 import { mdiClose, mdiPencil, mdiContentDuplicate } from "@mdi/js";
-import { CSSResultGroup, LitElement, css, html, nothing } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, query } from "lit/decorators";
 import { fireEvent } from "../../../common/dom/fire_event";
 import { stopPropagation } from "../../../common/dom/stop_propagation";
 import "../../../components/ha-icon-button";
 import "../../../components/ha-svg-icon";
-import { HomeAssistant } from "../../../types";
+import type { HomeAssistant } from "../../../types";
 import "../../../components/ha-select";
 import type { HaSelect } from "../../../components/ha-select";
 import { showConfirmationDialog } from "../../../dialogs/generic/show-dialog-box";
 import { getElementStubConfig } from "./get-element-stub-config";
-import {
+import type {
   ConditionalElementConfig,
   IconElementConfig,
   ImageElementConfig,
@@ -165,7 +165,7 @@ export class HuiPictureElementsCardRowEditor extends LitElement {
           `${((element as ConditionalElementConfig).elements || []).length.toString()} ${this.hass?.localize("ui.panel.lovelace.editor.card.picture-elements.elements")}`
         );
     }
-    return "Unknown type";
+    return element.title ?? "Unknown type";
   }
 
   private async _addElement(ev): Promise<void> {
@@ -229,44 +229,42 @@ export class HuiPictureElementsCardRowEditor extends LitElement {
     fireEvent(this, "elements-changed", { elements: newElements });
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      .element {
-        display: flex;
-        align-items: center;
-      }
+  static styles = css`
+    .element {
+      display: flex;
+      align-items: center;
+    }
 
-      .element-row {
-        height: 60px;
-        font-size: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-grow: 1;
-      }
+    .element-row {
+      height: 60px;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-grow: 1;
+    }
 
-      .element-row div {
-        display: flex;
-        flex-direction: column;
-      }
+    .element-row div {
+      display: flex;
+      flex-direction: column;
+    }
 
-      .remove-icon,
-      .edit-icon,
-      .duplicate-icon {
-        --mdc-icon-button-size: 36px;
-        color: var(--secondary-text-color);
-      }
+    .remove-icon,
+    .edit-icon,
+    .duplicate-icon {
+      --mdc-icon-button-size: 36px;
+      color: var(--secondary-text-color);
+    }
 
-      .secondary {
-        font-size: 12px;
-        color: var(--secondary-text-color);
-      }
+    .secondary {
+      font-size: 12px;
+      color: var(--secondary-text-color);
+    }
 
-      ha-select {
-        width: 100%;
-      }
-    `;
-  }
+    ha-select {
+      width: 100%;
+    }
+  `;
 }
 
 declare global {

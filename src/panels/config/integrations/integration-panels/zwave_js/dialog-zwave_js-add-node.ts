@@ -1,7 +1,8 @@
 import "@material/mwc-button/mwc-button";
 import { mdiAlertCircle, mdiCheckCircle, mdiQrcodeScan } from "@mdi/js";
-import { UnsubscribeFunc } from "home-assistant-js-websocket";
-import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
+import type { UnsubscribeFunc } from "home-assistant-js-websocket";
+import type { CSSResultGroup } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators";
 import { ifDefined } from "lit/directives/if-defined";
 import { fireEvent } from "../../../../../common/dom/fire_event";
@@ -16,12 +17,15 @@ import "../../../../../components/ha-radio";
 import "../../../../../components/ha-switch";
 import "../../../../../components/ha-textfield";
 import type { HaTextField } from "../../../../../components/ha-textfield";
+import type {
+  QRProvisioningInformation,
+  RequestedGrant,
+} from "../../../../../data/zwave_js";
 import {
+  cancelSecureBootstrapS2,
   InclusionStrategy,
   MINIMUM_QR_STRING_LENGTH,
   provisionZwaveSmartStartNode,
-  QRProvisioningInformation,
-  RequestedGrant,
   SecurityClass,
   stopZwaveInclusion,
   subscribeAddZwaveNode,
@@ -33,8 +37,8 @@ import {
   zwaveValidateDskAndEnterPin,
 } from "../../../../../data/zwave_js";
 import { haStyle, haStyleDialog } from "../../../../../resources/styles";
-import { HomeAssistant } from "../../../../../types";
-import { ZWaveJSAddNodeDialogParams } from "./show-dialog-zwave_js-add-node";
+import type { HomeAssistant } from "../../../../../types";
+import type { ZWaveJSAddNodeDialogParams } from "./show-dialog-zwave_js-add-node";
 
 export interface ZWaveJSAddNodeDevice {
   id: string;
@@ -86,7 +90,7 @@ class DialogZWaveJSAddNode extends LitElement {
 
   private _addNodeTimeoutHandle?: number;
 
-  private _subscribed?: Promise<UnsubscribeFunc>;
+  private _subscribed?: Promise<UnsubscribeFunc | undefined>;
 
   private _qrProcessing = false;
 
@@ -101,11 +105,21 @@ class DialogZWaveJSAddNode extends LitElement {
   }
 
   public async showDialog(params: ZWaveJSAddNodeDialogParams): Promise<void> {
+    if (this._status) {
+      // already started
+      return;
+    }
     this._params = params;
     this._entryId = params.entry_id;
     this._status = "loading";
     this._checkSmartStartSupport();
-    this._startInclusion();
+    if (params.dsk) {
+      this._status = "validate_dsk_enter_pin";
+      this._dsk = params.dsk;
+      this._startInclusion(undefined, params.dsk);
+    } else {
+      this._startInclusion();
+    }
   }
 
   @query("#pin-input") private _pinInput?: HaTextField;
@@ -687,9 +701,6 @@ class DialogZWaveJSAddNode extends LitElement {
           provisioningInfo
         );
         this._status = "provisioned";
-        if (this._params?.addedCallback) {
-          this._params.addedCallback();
-        }
       } catch (err: any) {
         this._error = err.message;
         this._status = "failed";
@@ -828,9 +839,6 @@ class DialogZWaveJSAddNode extends LitElement {
         if (message.event === "interview completed") {
           this._unsubscribe();
           this._status = "finished";
-          if (this._params?.addedCallback) {
-            this._params.addedCallback();
-          }
         }
 
         if (message.event === "interview stage completed") {
@@ -841,16 +849,20 @@ class DialogZWaveJSAddNode extends LitElement {
           }
         }
       },
-      this._inclusionStrategy,
       qrProvisioningInformation,
       undefined,
       undefined,
-      dsk
-    );
+      dsk,
+      this._inclusionStrategy
+    ).catch((err) => {
+      this._error = err.message;
+      this._status = "failed";
+      return undefined;
+    });
     this._addNodeTimeoutHandle = window.setTimeout(() => {
       this._unsubscribe();
       this._status = "timed_out";
-    }, 90000);
+    }, 300000);
   }
 
   private _onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -862,11 +874,24 @@ class DialogZWaveJSAddNode extends LitElement {
 
   private _unsubscribe(): void {
     if (this._subscribed) {
-      this._subscribed.then((unsub) => unsub());
+      this._subscribed.then((unsub) => unsub && unsub());
       this._subscribed = undefined;
     }
     if (this._entryId) {
       stopZwaveInclusion(this.hass, this._entryId);
+      if (
+        this._status &&
+        [
+          "waiting_for_device",
+          "validate_dsk_enter_pin",
+          "grant_security_classes",
+        ].includes(this._status)
+      ) {
+        cancelSecureBootstrapS2(this.hass, this._entryId);
+      }
+      if (this._params?.onStop) {
+        this._params.onStop();
+      }
     }
     this._requestedGrant = undefined;
     this._dsk = undefined;

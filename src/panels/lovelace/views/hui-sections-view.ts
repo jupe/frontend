@@ -1,33 +1,48 @@
 import { ResizeController } from "@lit-labs/observers/resize-controller";
-import { mdiDelete, mdiDrag, mdiPencil, mdiViewGridPlus } from "@mdi/js";
 import {
-  CSSResultGroup,
-  LitElement,
-  PropertyValues,
-  css,
-  html,
-  nothing,
-} from "lit";
+  mdiDelete,
+  mdiDrag,
+  mdiEyeOff,
+  mdiPencil,
+  mdiViewGridPlus,
+} from "@mdi/js";
+import type { PropertyValues } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { classMap } from "lit/directives/class-map";
 import { repeat } from "lit/directives/repeat";
 import { styleMap } from "lit/directives/style-map";
+import memoizeOne from "memoize-one";
 import { clamp } from "../../../common/number/clamp";
 import "../../../components/ha-icon-button";
+import "../../../components/ha-ripple";
 import "../../../components/ha-sortable";
 import "../../../components/ha-svg-icon";
-import "../../../components/ha-ripple";
 import type { LovelaceViewElement } from "../../../data/lovelace";
+import type { LovelaceCardConfig } from "../../../data/lovelace/config/card";
+import type { LovelaceSectionConfig } from "../../../data/lovelace/config/section";
 import type { LovelaceViewConfig } from "../../../data/lovelace/config/view";
 import { showConfirmationDialog } from "../../../dialogs/generic/show-dialog-box";
 import type { HomeAssistant } from "../../../types";
-import { HuiBadge } from "../badges/hui-badge";
+import type { HuiBadge } from "../badges/hui-badge";
 import "../badges/hui-view-badges";
+import type { HuiCard } from "../cards/hui-card";
 import "../components/hui-badge-edit-mode";
-import { addSection, deleteSection, moveSection } from "../editor/config-util";
-import { findLovelaceContainer } from "../editor/lovelace-path";
+import {
+  addSection,
+  deleteSection,
+  moveCard,
+  moveSection,
+} from "../editor/config-util";
+import type { LovelaceCardPath } from "../editor/lovelace-path";
+import {
+  findLovelaceContainer,
+  findLovelaceItems,
+  getLovelaceContainerPath,
+  parseLovelaceCardPath,
+} from "../editor/lovelace-path";
 import { showEditSectionDialog } from "../editor/section-editor/show-edit-section-dialog";
-import { HuiSection } from "../sections/hui-section";
+import type { HuiSection } from "../sections/hui-section";
 import type { Lovelace } from "../types";
 
 export const DEFAULT_MAX_COLUMNS = 4;
@@ -42,11 +57,13 @@ export class SectionsView extends LitElement implements LovelaceViewElement {
 
   @property({ type: Number }) public index?: number;
 
-  @property({ type: Boolean }) public isStrategy = false;
+  @property({ attribute: false }) public isStrategy = false;
 
   @property({ attribute: false }) public sections: HuiSection[] = [];
 
   @property({ attribute: false }) public badges: HuiBadge[] = [];
+
+  @property({ attribute: false }) public cards: HuiCard[] = [];
 
   @state() private _config?: LovelaceViewConfig;
 
@@ -175,8 +192,6 @@ export class SectionsView extends LitElement implements LovelaceViewElement {
 
               const rowSpan = sectionConfig?.row_span || 1;
 
-              (section as any).itemPath = [idx];
-
               return html`
                 <div
                   class="section"
@@ -228,19 +243,64 @@ export class SectionsView extends LitElement implements LovelaceViewElement {
           )}
           ${editMode
             ? html`
-                <button
-                  class="create-section"
-                  @click=${this._createSection}
-                  aria-label=${this.hass.localize(
-                    "ui.panel.lovelace.editor.section.create_section"
-                  )}
-                  .title=${this.hass.localize(
-                    "ui.panel.lovelace.editor.section.create_section"
-                  )}
+                <ha-sortable
+                  group="card"
+                  @item-added=${this._handleCardAdded}
+                  draggable-selector=".card"
+                  .rollback=${false}
                 >
-                  <ha-ripple></ha-ripple>
-                  <ha-svg-icon .path=${mdiViewGridPlus}></ha-svg-icon>
-                </button>
+                  <div class="create-section-container">
+                    <div class="drop-helper" aria-hidden="true">
+                      <p>
+                        ${this.hass.localize(
+                          "ui.panel.lovelace.editor.section.drop_card_create_section"
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      class="create-section"
+                      @click=${this._createSection}
+                      aria-label=${this.hass.localize(
+                        "ui.panel.lovelace.editor.section.create_section"
+                      )}
+                      .title=${this.hass.localize(
+                        "ui.panel.lovelace.editor.section.create_section"
+                      )}
+                    >
+                      <ha-ripple></ha-ripple>
+                      <ha-svg-icon .path=${mdiViewGridPlus}></ha-svg-icon>
+                    </button>
+                  </div>
+                </ha-sortable>
+              `
+            : nothing}
+          ${editMode && this._config?.cards?.length
+            ? html`
+                <div class="section imported-cards">
+                  <div class="imported-card-header">
+                    <p class="title">
+                      <ha-svg-icon .path=${mdiEyeOff}></ha-svg-icon>
+                      ${this.hass.localize(
+                        "ui.panel.lovelace.editor.section.imported_cards_title"
+                      )}
+                    </p>
+                    <p class="subtitle">
+                      ${this.hass.localize(
+                        "ui.panel.lovelace.editor.section.imported_cards_description"
+                      )}
+                    </p>
+                  </div>
+                  <hui-section
+                    .lovelace=${this.lovelace}
+                    .hass=${this.hass}
+                    .config=${this._importedCardSectionConfig(
+                      this._config.cards
+                    )}
+                    .viewIndex=${this.index}
+                    preview
+                    import-only
+                  ></hui-section>
+                </div>
               `
             : nothing}
         </div>
@@ -248,18 +308,65 @@ export class SectionsView extends LitElement implements LovelaceViewElement {
     `;
   }
 
-  private _createSection(): void {
-    const newConfig = addSection(this.lovelace!.config, this.index!, {
+  private _defaultSection(includeHeading: boolean): LovelaceSectionConfig {
+    return {
       type: "grid",
-      cards: [
-        {
-          type: "heading",
-          heading: this.hass!.localize(
-            "ui.panel.lovelace.editor.section.default_section_title"
-          ),
-        },
-      ],
-    });
+      cards: includeHeading
+        ? [
+            {
+              type: "heading",
+              heading: this.hass!.localize(
+                "ui.panel.lovelace.editor.section.default_section_title"
+              ),
+            },
+          ]
+        : [],
+    };
+  }
+
+  private _handleCardAdded(ev) {
+    const { data } = ev.detail;
+    const oldPath = data as LovelaceCardPath;
+
+    const { cardIndex } = parseLovelaceCardPath(oldPath);
+    const containerPath = getLovelaceContainerPath(oldPath);
+    const cards = findLovelaceItems(
+      "cards",
+      this.lovelace!.config,
+      containerPath
+    );
+    const cardConfig = cards![cardIndex];
+
+    const configWithNewSection = addSection(
+      this.lovelace!.config,
+      this.index!,
+      this._defaultSection(cardConfig.type !== "heading") // If we move a heading card, we don't want to include a heading in the new section
+    );
+    const viewConfig = configWithNewSection.views[
+      this.index!
+    ] as LovelaceViewConfig;
+    const newPath = [
+      this.index!,
+      viewConfig.sections!.length - 1,
+      1,
+    ] as LovelaceCardPath;
+    const newConfig = moveCard(configWithNewSection, oldPath, newPath);
+    this.lovelace!.saveConfig(newConfig);
+  }
+
+  private _importedCardSectionConfig = memoizeOne(
+    (cards: LovelaceCardConfig[]) => ({
+      type: "grid",
+      cards,
+    })
+  );
+
+  private _createSection(): void {
+    const newConfig = addSection(
+      this.lovelace!.config,
+      this.index!,
+      this._defaultSection(true)
+    );
     this.lovelace!.saveConfig(newConfig);
   }
 
@@ -316,132 +423,207 @@ export class SectionsView extends LitElement implements LovelaceViewElement {
     this.lovelace!.saveConfig(newConfig);
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
+  static styles = css`
+    :host {
+      --row-height: var(--ha-view-sections-row-height, 56px);
+      --row-gap: var(--ha-view-sections-row-gap, 8px);
+      --column-gap: var(--ha-view-sections-column-gap, 32px);
+      --column-max-width: var(--ha-view-sections-column-max-width, 500px);
+      --column-min-width: var(--ha-view-sections-column-min-width, 320px);
+      display: block;
+    }
+
+    @media (max-width: 600px) {
       :host {
-        --row-height: var(--ha-view-sections-row-height, 56px);
-        --row-gap: var(--ha-view-sections-row-gap, 8px);
-        --column-gap: var(--ha-view-sections-column-gap, 32px);
-        --column-max-width: var(--ha-view-sections-column-max-width, 500px);
-        --column-min-width: var(--ha-view-sections-column-min-width, 320px);
-        display: block;
+        --column-gap: var(--row-gap);
       }
+    }
 
-      @media (max-width: 600px) {
-        :host {
-          --column-gap: var(--row-gap);
-        }
-      }
+    .container > * {
+      position: relative;
+      width: 100%;
+    }
 
-      .container > * {
-        position: relative;
-        width: 100%;
-      }
+    .section {
+      border-radius: var(--ha-card-border-radius, 12px);
+      grid-column: span var(--column-span);
+      grid-row: span var(--row-span);
+    }
 
-      .section {
-        border-radius: var(--ha-card-border-radius, 12px);
-        grid-column: span var(--column-span);
-        grid-row: span var(--row-span);
-      }
+    .section:has(hui-section[hidden]) {
+      display: none;
+    }
 
-      .section:has(hui-section[hidden]) {
-        display: none;
-      }
+    .container {
+      --column-count: min(var(--max-column-count), var(--total-section-count));
+      display: grid;
+      align-items: start;
+      justify-content: center;
+      grid-template-columns: repeat(var(--column-count), 1fr);
+      grid-auto-flow: row;
+      gap: var(--row-gap) var(--column-gap);
+      padding: var(--row-gap) var(--column-gap);
+      box-sizing: content-box;
+      margin: 0 auto;
+      max-width: calc(
+        var(--column-count) * var(--column-max-width) +
+          (var(--column-count) - 1) * var(--column-gap)
+      );
+    }
+    .container.dense {
+      grid-auto-flow: row dense;
+    }
 
-      .container {
-        --column-count: min(
-          var(--max-column-count),
-          var(--total-section-count)
-        );
-        display: grid;
-        align-items: start;
-        justify-content: center;
-        grid-template-columns: repeat(var(--column-count), 1fr);
-        grid-auto-flow: row;
-        gap: var(--row-gap) var(--column-gap);
-        padding: var(--row-gap) var(--column-gap);
-        box-sizing: content-box;
-        margin: 0 auto;
-        max-width: calc(
-          var(--column-count) * var(--column-max-width) +
-            (var(--column-count) - 1) * var(--column-gap)
-        );
-      }
-      .container.dense {
-        grid-auto-flow: row dense;
-      }
+    .handle {
+      cursor: grab;
+      padding: 8px;
+    }
 
-      .handle {
-        cursor: grab;
-        padding: 8px;
-      }
+    .create-section-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      margin-top: 36px;
+    }
 
-      .create-section {
-        margin-top: 36px;
-        outline: none;
-        background: none;
-        cursor: pointer;
-        border-radius: var(--ha-card-border-radius, 12px);
-        border: 2px dashed var(--primary-color);
-        order: 1;
-        height: calc(var(--row-height) + 2 * (var(--row-gap) + 2px));
-        padding: 8px;
-        box-sizing: border-box;
-        --ha-ripple-color: var(--primary-color);
-        --ha-ripple-hover-opacity: 0.04;
-        --ha-ripple-pressed-opacity: 0.12;
-      }
+    .create-section-container .card {
+      display: none;
+    }
 
-      .create-section:focus {
-        border: 2px solid var(--primary-color);
-      }
+    .create-section-container:has(.card) .drop-helper {
+      display: flex;
+    }
+    .create-section-container:has(.card) .create-section {
+      display: none;
+    }
 
-      .sortable-ghost {
-        border-radius: var(--ha-card-border-radius, 12px);
-      }
+    .drop-helper {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      outline: none;
+      background: none;
+      cursor: pointer;
+      border-radius: var(--ha-card-border-radius, 12px);
+      border: 2px dashed var(--primary-color);
+      height: calc(var(--row-height) + 2 * (var(--row-gap) + 2px));
+      padding: 8px;
+      box-sizing: border-box;
+      width: 100%;
+      --ha-ripple-color: var(--primary-color);
+      --ha-ripple-hover-opacity: 0.04;
+      --ha-ripple-pressed-opacity: 0.12;
+    }
 
-      hui-view-badges {
-        display: block;
-        text-align: center;
-        padding: 0 var(--column-gap);
-        padding-top: var(--row-gap);
-        margin: auto;
-        max-width: calc(
-          var(--max-column-count) * var(--column-max-width) +
-            (var(--max-column-count) - 1) * var(--column-gap)
-        );
-      }
+    .drop-helper p {
+      color: var(--primary-text-color);
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 24px;
+      text-align: center;
+    }
 
-      .section-header {
-        position: relative;
-        height: 34px;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-      }
+    .create-section {
+      display: block;
+      position: relative;
+      outline: none;
+      background: none;
+      cursor: pointer;
+      border-radius: var(--ha-card-border-radius, 12px);
+      border: 2px dashed var(--primary-color);
+      order: 1;
+      height: calc(var(--row-height) + 2 * (var(--row-gap) + 2px));
+      padding: 8px;
+      box-sizing: border-box;
+      width: 100%;
+      --ha-ripple-color: var(--primary-color);
+      --ha-ripple-hover-opacity: 0.04;
+      --ha-ripple-pressed-opacity: 0.12;
+    }
 
-      .section-actions {
-        position: absolute;
-        height: 36px;
-        bottom: -2px;
-        right: 0;
-        inset-inline-end: 0;
-        inset-inline-start: initial;
-        opacity: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: opacity 0.2s ease-in-out;
-        border-radius: var(--ha-card-border-radius, 12px);
-        border-bottom-left-radius: 0px;
-        border-bottom-right-radius: 0px;
-        background: var(--secondary-background-color);
-        --mdc-icon-button-size: 36px;
-        --mdc-icon-size: 20px;
-        color: var(--primary-text-color);
-      }
-    `;
-  }
+    .create-section:focus {
+      border: 2px solid var(--primary-color);
+    }
+
+    .sortable-ghost {
+      border-radius: var(--ha-card-border-radius, 12px);
+    }
+
+    hui-view-badges {
+      display: block;
+      text-align: center;
+      padding: 0 var(--column-gap);
+      padding-top: var(--row-gap);
+      margin: auto;
+      max-width: calc(
+        var(--max-column-count) * var(--column-max-width) +
+          (var(--max-column-count) - 1) * var(--column-gap)
+      );
+    }
+
+    .section-header {
+      position: relative;
+      height: 34px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    .section-actions {
+      position: absolute;
+      height: 36px;
+      bottom: -2px;
+      right: 0;
+      inset-inline-end: 0;
+      inset-inline-start: initial;
+      opacity: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s ease-in-out;
+      border-radius: var(--ha-card-border-radius, 12px);
+      border-bottom-left-radius: 0px;
+      border-bottom-right-radius: 0px;
+      background: var(--secondary-background-color);
+      --mdc-icon-button-size: 36px;
+      --mdc-icon-size: 20px;
+      color: var(--primary-text-color);
+    }
+
+    .imported-cards {
+      --column-span: var(--column-count);
+      --row-span: 1;
+      order: 2;
+    }
+
+    .imported-card-header {
+      margin-top: 36px;
+      padding: 32px 0 16px 0;
+      border-top: 4px dotted var(--divider-color);
+    }
+
+    .imported-card-header .title {
+      margin: 0;
+      color: var(--primary-text-color);
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 24px;
+      --mdc-icon-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .imported-card-header .subtitle {
+      margin: 0;
+      color: var(--secondary-text-color);
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 20px;
+    }
+  `;
 }
 
 declare global {

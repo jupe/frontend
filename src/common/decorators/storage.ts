@@ -1,6 +1,6 @@
-import { UnsubscribeFunc } from "home-assistant-js-websocket";
-import { ReactiveElement } from "lit";
-import { InternalPropertyDeclaration } from "lit/decorators";
+import type { UnsubscribeFunc } from "home-assistant-js-websocket";
+import type { ReactiveElement } from "lit";
+import type { InternalPropertyDeclaration } from "lit/decorators";
 import type { ClassElement } from "../../types";
 
 type Callback = (oldValue: any, newValue: any) => void;
@@ -31,11 +31,9 @@ class StorageClass {
 
   public storage: globalThis.Storage;
 
-  private _storage: { [storageKey: string]: any } = {};
+  private _storage: Record<string, any> = {};
 
-  private _listeners: {
-    [storageKey: string]: Callback[];
-  } = {};
+  private _listeners: Record<string, Callback[]> = {};
 
   public addFromStorage(storageKey: any): void {
     if (!this._storage[storageKey]) {
@@ -87,7 +85,7 @@ class StorageClass {
       } else {
         this.storage.setItem(storageKey, JSON.stringify(value));
       }
-    } catch (err: any) {
+    } catch (_err: any) {
       // Safari in private mode doesn't allow localstorage
     } finally {
       if (this._listeners[storageKey]) {

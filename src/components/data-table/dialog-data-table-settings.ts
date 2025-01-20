@@ -1,18 +1,22 @@
 import "@material/mwc-list";
 import { mdiDrag, mdiEye, mdiEyeOff } from "@mdi/js";
-import { CSSResultGroup, LitElement, css, html, nothing } from "lit";
+import type { CSSResultGroup } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { classMap } from "lit/directives/class-map";
 import { repeat } from "lit/directives/repeat";
 import memoizeOne from "memoize-one";
 import { haStyleDialog } from "../../resources/styles";
-import { HomeAssistant } from "../../types";
+import type { HomeAssistant } from "../../types";
 import { createCloseHeading } from "../ha-dialog";
 import "../ha-list-item";
 import "../ha-sortable";
 import "../ha-button";
-import { DataTableColumnContainer, DataTableColumnData } from "./ha-data-table";
-import { DataTableSettingsDialogParams } from "./show-dialog-data-table-settings";
+import type {
+  DataTableColumnContainer,
+  DataTableColumnData,
+} from "./ha-data-table";
+import type { DataTableSettingsDialogParams } from "./show-dialog-data-table-settings";
 import { fireEvent } from "../../common/dom/fire_event";
 
 @customElement("dialog-data-table-settings")
@@ -181,7 +185,7 @@ export class DialogDataTableSettings extends LitElement {
     this._params!.onUpdate(this._columnOrder, this._hiddenColumns);
   }
 
-  _toggle(ev) {
+  private _toggle(ev) {
     if (!this._params) {
       return;
     }
@@ -214,8 +218,8 @@ export class DialogDataTableSettings extends LitElement {
 
       // Array.findLastIndex when supported or core-js polyfill
       const findLastIndex = (
-        arr: Array<any>,
-        fn: (item: any, index: number, arr: Array<any>) => boolean
+        arr: any[],
+        fn: (item: any, index: number, arr: any[]) => boolean
       ) => {
         for (let i = arr.length - 1; i >= 0; i--) {
           if (fn(arr[i], i, arr)) return i;
@@ -262,7 +266,7 @@ export class DialogDataTableSettings extends LitElement {
     this._params!.onUpdate(this._columnOrder, this._hiddenColumns);
   }
 
-  _reset() {
+  private _reset() {
     this._columnOrder = undefined;
     this._hiddenColumns = undefined;
 

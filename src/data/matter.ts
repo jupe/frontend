@@ -1,6 +1,6 @@
-import { UnsubscribeFunc } from "home-assistant-js-websocket";
+import type { UnsubscribeFunc } from "home-assistant-js-websocket";
 import { navigate } from "../common/navigate";
-import { HomeAssistant } from "../types";
+import type { HomeAssistant } from "../types";
 import { subscribeDeviceRegistry } from "./device_registry";
 import { isComponentLoaded } from "../common/config/is_component_loaded";
 import { getThreadDataSetTLV, listThreadDataSets } from "./thread";
@@ -40,9 +40,7 @@ export interface MatterNodeDiagnostics {
   active_fabric_index: number;
 }
 
-export interface MatterPingResult {
-  [ip_address: string]: boolean;
-}
+export type MatterPingResult = Record<string, boolean>;
 
 export interface MatterCommissioningParameters {
   setup_pin_code: number;

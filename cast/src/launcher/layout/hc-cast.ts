@@ -1,10 +1,12 @@
 import "@material/mwc-button/mwc-button";
-import { ActionDetail } from "@material/mwc-list/mwc-list";
+import "@material/mwc-list/mwc-list";
+import type { ActionDetail } from "@material/mwc-list/mwc-list";
 import { mdiCast, mdiCastConnected, mdiViewDashboard } from "@mdi/js";
-import { Auth, Connection } from "home-assistant-js-websocket";
-import { CSSResultGroup, LitElement, TemplateResult, css, html } from "lit";
+import type { Auth, Connection } from "home-assistant-js-websocket";
+import type { TemplateResult } from "lit";
+import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators";
-import { CastManager } from "../../../../src/cast/cast_manager";
+import type { CastManager } from "../../../../src/cast/cast_manager";
 import {
   castSendShowLovelaceView,
   ensureConnectedCastSession,
@@ -23,7 +25,7 @@ import {
   getLovelaceCollection,
 } from "../../../../src/data/lovelace";
 import { isStrategyDashboard } from "../../../../src/data/lovelace/config/types";
-import { LovelaceViewConfig } from "../../../../src/data/lovelace/config/view";
+import type { LovelaceViewConfig } from "../../../../src/data/lovelace/config/view";
 import "../../../../src/layouts/hass-loading-screen";
 import { generateDefaultViewConfig } from "../../../../src/panels/lovelace/common/generate-lovelace-config";
 import "./hc-layout";
@@ -89,8 +91,8 @@ class HcCast extends LitElement {
                       generateDefaultViewConfig({}, {}, {}, {}, () => ""),
                     ]
                   ).map(
-                    (view, idx) =>
-                      html`<ha-list-item
+                    (view, idx) => html`
+                      <ha-list-item
                         graphic="avatar"
                         .activated=${this.castManager.status?.lovelacePath ===
                         (view.path ?? idx)}
@@ -108,8 +110,9 @@ class HcCast extends LitElement {
                           : html`<ha-svg-icon
                               slot="item-icon"
                               .path=${mdiViewDashboard}
-                            ></ha-svg-icon>`}</ha-list-item
-                      > `
+                            ></ha-svg-icon>`}
+                      </ha-list-item>
+                    `
                   )}</mwc-list
                 >
               `}
@@ -200,74 +203,72 @@ class HcCast extends LitElement {
       }
       this.connection.close();
       location.reload();
-    } catch (err: any) {
+    } catch (_err: any) {
       alert("Unable to log out!");
     }
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      .center-item {
-        display: flex;
-        justify-content: space-around;
-      }
+  static styles = css`
+    .center-item {
+      display: flex;
+      justify-content: space-around;
+    }
 
-      .action-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
+    .action-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
 
-      .question {
-        position: relative;
-        padding: 8px 16px;
-      }
+    .question {
+      position: relative;
+      padding: 8px 16px;
+    }
 
-      .question:before {
-        border-radius: 4px;
-        position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        pointer-events: none;
-        content: "";
-        background-color: var(--primary-color);
-        opacity: 0.12;
-        will-change: opacity;
-      }
+    .question:before {
+      border-radius: 4px;
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      pointer-events: none;
+      content: "";
+      background-color: var(--primary-color);
+      opacity: 0.12;
+      will-change: opacity;
+    }
 
-      .connection,
-      .connection a {
-        color: var(--secondary-text-color);
-      }
+    .connection,
+    .connection a {
+      color: var(--secondary-text-color);
+    }
 
-      mwc-button ha-svg-icon {
-        margin-right: 8px;
-        margin-inline-end: 8px;
-        margin-inline-start: initial;
-        height: 18px;
-      }
+    mwc-button ha-svg-icon {
+      margin-right: 8px;
+      margin-inline-end: 8px;
+      margin-inline-start: initial;
+      height: 18px;
+    }
 
-      ha-list-item ha-icon,
-      ha-list-item ha-svg-icon {
-        padding: 12px;
-        color: var(--secondary-text-color);
-      }
+    ha-list-item ha-icon,
+    ha-list-item ha-svg-icon {
+      padding: 12px;
+      color: var(--secondary-text-color);
+    }
 
-      :host([hide-icons]) ha-icon {
-        display: none;
-      }
+    :host([hide-icons]) ha-icon {
+      display: none;
+    }
 
-      .spacer {
-        flex: 1;
-      }
+    .spacer {
+      flex: 1;
+    }
 
-      .card-content a {
-        color: var(--primary-color);
-      }
-    `;
-  }
+    .card-content a {
+      color: var(--primary-color);
+    }
+  `;
 }
 
 declare global {

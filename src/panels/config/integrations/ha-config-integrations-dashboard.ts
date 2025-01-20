@@ -1,17 +1,11 @@
-import { ActionDetail } from "@material/mwc-list";
+import type { ActionDetail } from "@material/mwc-list";
 import { mdiFilterVariant, mdiPlus } from "@mdi/js";
 import type { IFuseOptions } from "fuse.js";
 import Fuse from "fuse.js";
 import type { UnsubscribeFunc } from "home-assistant-js-websocket";
-import {
-  CSSResultGroup,
-  LitElement,
-  PropertyValues,
-  css,
-  html,
-  nothing,
-} from "lit";
-import { customElement, property, state } from "lit/decorators";
+import type { CSSResultGroup, PropertyValues } from "lit";
+import { LitElement, css, html, nothing } from "lit";
+import { customElement, property, query, state } from "lit/decorators";
 import { ifDefined } from "lit/directives/if-defined";
 import memoizeOne from "memoize-one";
 import { isComponentLoaded } from "../../../common/config/is_component_loaded";
@@ -32,16 +26,17 @@ import "../../../components/ha-icon-button";
 import "../../../components/ha-svg-icon";
 import "../../../components/search-input";
 import "../../../components/search-input-outlined";
-import { ConfigEntry, getConfigEntries } from "../../../data/config_entries";
+import type { ConfigEntry } from "../../../data/config_entries";
+import { getConfigEntries } from "../../../data/config_entries";
 import { getConfigFlowInProgressCollection } from "../../../data/config_flow";
 import { fetchDiagnosticHandlers } from "../../../data/diagnostics";
-import {
-  EntityRegistryEntry,
-  subscribeEntityRegistry,
-} from "../../../data/entity_registry";
-import {
+import type { EntityRegistryEntry } from "../../../data/entity_registry";
+import { subscribeEntityRegistry } from "../../../data/entity_registry";
+import type {
   IntegrationLogInfo,
   IntegrationManifest,
+} from "../../../data/integration";
+import {
   domainToName,
   fetchIntegrationManifest,
   fetchIntegrationManifests,
@@ -66,7 +61,7 @@ import { getStripDiacriticsFn } from "../../../util/fuse";
 import { configSections } from "../ha-panel-config";
 import { isHelperDomain } from "../helpers/const";
 import "./ha-config-flow-card";
-import { DataEntryFlowProgressExtended } from "./ha-config-integrations";
+import type { DataEntryFlowProgressExtended } from "./ha-config-integrations";
 import "./ha-disabled-config-entry-card";
 import "./ha-ignored-config-entry-card";
 import "./ha-integration-card";
@@ -74,6 +69,8 @@ import type { HaIntegrationCard } from "./ha-integration-card";
 import "./ha-integration-overflow-menu";
 import { showAddIntegrationDialog } from "./show-add-integration-dialog";
 import { fetchEntitySourcesWithCache } from "../../../data/entity_sources";
+import type { ImprovDiscoveredDevice } from "../../../external_app/external_messaging";
+import { KeyboardShortcutMixin } from "../../../mixins/keyboard-shortcut-mixin";
 
 export interface ConfigEntryExtended extends Omit<ConfigEntry, "entry_id"> {
   entry_id?: string;
@@ -94,14 +91,16 @@ const groupByIntegration = (
   return result;
 };
 @customElement("ha-config-integrations-dashboard")
-class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
+class HaConfigIntegrationsDashboard extends KeyboardShortcutMixin(
+  SubscribeMixin(LitElement)
+) {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
   @property({ type: Boolean, reflect: true }) public narrow = false;
 
-  @property({ type: Boolean }) public isWide = false;
+  @property({ attribute: "is-wide", type: Boolean }) public isWide = false;
 
-  @property({ type: Boolean }) public showAdvanced = false;
+  @property({ attribute: false }) public showAdvanced = false;
 
   @property({ attribute: false }) public route!: Route;
 
@@ -109,6 +108,11 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
 
   @property({ attribute: false })
   public configEntriesInProgress?: DataEntryFlowProgressExtended[];
+
+  @state() private _improvDiscovered = new Map<
+    string,
+    ImprovDiscoveredDevice
+  >();
 
   @state()
   private _entityRegistryEntries: EntityRegistryEntry[] = [];
@@ -132,17 +136,29 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
 
   @state() private _diagnosticHandlers?: Record<string, boolean>;
 
-  @state() private _logInfos?: {
-    [integration: string]: IntegrationLogInfo;
-  };
+  @state() private _logInfos?: Record<string, IntegrationLogInfo>;
 
-  public hassSubscribe(): Array<UnsubscribeFunc | Promise<UnsubscribeFunc>> {
+  @query("search-input-outlined") private _searchInput!: HTMLElement;
+
+  public disconnectedCallback(): void {
+    super.disconnectedCallback();
+    window.removeEventListener(
+      "improv-discovered-device",
+      this._handleImprovDiscovered
+    );
+    window.removeEventListener(
+      "improv-device-setup-done",
+      this._reScanImprovDevices
+    );
+  }
+
+  public hassSubscribe(): (UnsubscribeFunc | Promise<UnsubscribeFunc>)[] {
     return [
       subscribeEntityRegistry(this.hass.connection, (entries) => {
         this._entityRegistryEntries = entries;
       }),
       subscribeLogInfo(this.hass.connection, (log_infos) => {
-        const logInfoLookup: { [integration: string]: IntegrationLogInfo } = {};
+        const logInfoLookup: Record<string, IntegrationLogInfo> = {};
         for (const log_info of log_infos) {
           logInfoLookup[log_info.domain] = log_info;
         }
@@ -249,8 +265,38 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
   private _filterConfigEntriesInProgress = memoizeOne(
     (
       configEntriesInProgress: DataEntryFlowProgressExtended[],
+      improvDiscovered: Map<string, ImprovDiscoveredDevice>,
       filter?: string
     ): DataEntryFlowProgressExtended[] => {
+      let inProgress = [...configEntriesInProgress];
+
+      const improvDiscoveredArray = Array.from(improvDiscovered.values());
+
+      if (improvDiscoveredArray.length) {
+        // filter out native flows that have been discovered by both mobile and local bluetooth
+        inProgress = inProgress.filter(
+          (flow) =>
+            !improvDiscoveredArray.some(
+              (discovered) => discovered.name === flow.localized_title
+            )
+        );
+
+        // add mobile flows to the list
+        improvDiscovered.forEach((discovered) => {
+          inProgress.push({
+            flow_id: "external",
+            handler: "improv_ble",
+            context: {
+              title_placeholders: {
+                name: discovered.name,
+              },
+            },
+            step_id: "bluetooth_confirm",
+            localized_title: discovered.name,
+          });
+        });
+      }
+
       let filteredEntries: DataEntryFlowProgressExtended[];
       if (filter) {
         const options: IFuseOptions<DataEntryFlowProgressExtended> = {
@@ -260,12 +306,12 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
           threshold: 0.2,
           getFn: getStripDiacriticsFn,
         };
-        const fuse = new Fuse(configEntriesInProgress, options);
+        const fuse = new Fuse(inProgress, options);
         filteredEntries = fuse
           .search(stripDiacritics(filter))
           .map((result) => result.item);
       } else {
-        filteredEntries = configEntriesInProgress;
+        filteredEntries = inProgress;
       }
       return filteredEntries.sort((a, b) =>
         caseInsensitiveStringCompare(
@@ -285,6 +331,8 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
       this._handleAdd();
     }
     this._scanUSBDevices();
+    this._scanImprovDevices();
+
     if (isComponentLoaded(this.hass, "diagnostics")) {
       fetchDiagnosticHandlers(this.hass).then((infos) => {
         const handlers = {};
@@ -339,6 +387,7 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
       );
     const configEntriesInProgress = this._filterConfigEntriesInProgress(
       this.configEntriesInProgress,
+      this._improvDiscovered,
       this._filter
     );
 
@@ -392,9 +441,8 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
       >
         ${this.narrow
           ? html`
-              <div slot="header">
+              <div slot="header" class="header">
                 <search-input-outlined
-                  class="header"
                   .hass=${this.hass}
                   .filter=${this._filter}
                   @value-changed=${this._handleSearchChange}
@@ -413,7 +461,6 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
               ></ha-integration-overflow-menu>
               <div class="search">
                 <search-input-outlined
-                  class="header"
                   .hass=${this.hass}
                   .filter=${this._filter}
                   @value-changed=${this._handleSearchChange}
@@ -613,6 +660,43 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
     await scanUSBDevices(this.hass);
   }
 
+  private _scanImprovDevices() {
+    if (!this.hass.auth.external?.config.canSetupImprov) {
+      return;
+    }
+
+    window.addEventListener(
+      "improv-discovered-device",
+      this._handleImprovDiscovered
+    );
+
+    window.addEventListener(
+      "improv-device-setup-done",
+      this._reScanImprovDevices
+    );
+
+    this.hass.auth.external!.fireMessage({
+      type: "improv/scan",
+    });
+  }
+
+  private _reScanImprovDevices = () => {
+    if (!this.hass.auth.external?.config.canSetupImprov) {
+      return;
+    }
+    this._improvDiscovered = new Map();
+    this.hass.auth.external!.fireMessage({
+      type: "improv/scan",
+    });
+  };
+
+  private _handleImprovDiscovered = (ev) => {
+    this._fetchManifests(["improv_ble"]);
+    this._improvDiscovered.set(ev.detail.name, ev.detail);
+    // copy for memoize and reactive updates
+    this._improvDiscovered = new Map(Array.from(this._improvDiscovered));
+  };
+
   private async _fetchEntitySources() {
     const entitySources = await fetchEntitySourcesWithCache(this.hass);
 
@@ -662,6 +746,7 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
 
   private _handleFlowUpdated() {
     getConfigFlowInProgressCollection(this.hass.connection).refresh();
+    this._reScanImprovDevices();
     this._fetchManifests();
   }
 
@@ -669,11 +754,6 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
     showAddIntegrationDialog(this, {
       initialFilter: this._filter,
     });
-    if (this.hass.auth.external?.config.canSetupImprov) {
-      this.hass.auth.external!.fireMessage({
-        type: "improv/scan",
-      });
-    }
   }
 
   private _handleMenuAction(ev: CustomEvent<ActionDetail>) {
@@ -749,6 +829,10 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
       if (integration.single_config_entry) {
         const configEntries = await getConfigEntries(this.hass, { domain });
         if (configEntries.length > 0) {
+          const localize = await this.hass.loadBackendTranslation(
+            "title",
+            integration.name
+          );
           showAlertDialog(this, {
             title: this.hass.localize(
               "ui.panel.config.integrations.config_flow.single_config_entry_title"
@@ -756,7 +840,7 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
             text: this.hass.localize(
               "ui.panel.config.integrations.config_flow.single_config_entry",
               {
-                integration_name: integration.name,
+                integration_name: domainToName(localize, integration.name!),
               }
             ),
           });
@@ -785,7 +869,7 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
     }
 
     if (integration?.supported_by) {
-      // Integration is a alias, so we can just create a flow
+      // Integration is an alias, so we can just create a flow
       const localize = await this.hass.loadBackendTranslation(
         "title",
         domain,
@@ -812,7 +896,7 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
         ),
         confirm: async () => {
           if (
-            (PROTOCOL_INTEGRATIONS as ReadonlyArray<string>).includes(
+            (PROTOCOL_INTEGRATIONS as readonly string[]).includes(
               integration.supported_by!
             )
           ) {
@@ -867,6 +951,12 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
     });
   }
 
+  protected supportedShortcuts(): SupportedShortcuts {
+    return {
+      f: () => this._searchInput.focus(),
+    };
+  }
+
   static get styles(): CSSResultGroup {
     return [
       haStyle,
@@ -900,6 +990,9 @@ class HaConfigIntegrationsDashboard extends SubscribeMixin(LitElement) {
         }
         search-input-outlined {
           flex: 1;
+        }
+        .header {
+          display: flex;
         }
         .search {
           display: flex;

@@ -1,4 +1,4 @@
-import {
+import type {
   HassEntityAttributeBase,
   HassEntityBase,
 } from "home-assistant-js-websocket";
@@ -17,9 +17,9 @@ export const enum LawnMowerEntityFeature {
   DOCK = 4,
 }
 
-interface LawnMowerEntityAttributes extends HassEntityAttributeBase {
-  [key: string]: any;
-}
+interface LawnMowerEntityAttributes
+  extends HassEntityAttributeBase,
+    Record<string, any> {}
 
 export interface LawnMowerEntity extends HassEntityBase {
   attributes: LawnMowerEntityAttributes;

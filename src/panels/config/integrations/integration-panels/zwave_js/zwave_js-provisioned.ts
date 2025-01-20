@@ -2,17 +2,17 @@ import { mdiCheckCircle, mdiCloseCircleOutline, mdiDelete } from "@mdi/js";
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import memoizeOne from "memoize-one";
-import { DataTableColumnContainer } from "../../../../../components/data-table/ha-data-table";
+import type { DataTableColumnContainer } from "../../../../../components/data-table/ha-data-table";
+import type { ZwaveJSProvisioningEntry } from "../../../../../data/zwave_js";
 import {
-  ZwaveJSProvisioningEntry,
   fetchZwaveProvisioningEntries,
   SecurityClass,
   unprovisionZwaveSmartStartNode,
 } from "../../../../../data/zwave_js";
-import { LocalizeFunc } from "../../../../../common/translations/localize";
+import type { LocalizeFunc } from "../../../../../common/translations/localize";
 import { showConfirmationDialog } from "../../../../../dialogs/generic/show-dialog-box";
 import "../../../../../layouts/hass-tabs-subpage-data-table";
-import { HomeAssistant, Route } from "../../../../../types";
+import type { HomeAssistant, Route } from "../../../../../types";
 import { configTabs } from "./zwave_js-config-router";
 
 @customElement("zwave_js-provisioned")
@@ -23,7 +23,7 @@ class ZWaveJSProvisioned extends LitElement {
 
   @property({ type: Boolean }) public narrow = false;
 
-  @property() public configEntryId!: string;
+  @property({ attribute: false }) public configEntryId!: string;
 
   @state() private _provisioningEntries: ZwaveJSProvisioningEntry[] = [];
 
@@ -94,12 +94,12 @@ class ZWaveJSProvisioned extends LitElement {
       },
       unprovision: {
         showNarrow: true,
-        title: localize("ui.panel.config.zwave_js.provisioned.unprovison"),
+        title: localize("ui.panel.config.zwave_js.provisioned.unprovision"),
         type: "icon-button",
         template: (entry) => html`
           <ha-icon-button
             .label=${this.hass.localize(
-              "ui.panel.config.zwave_js.provisioned.unprovison"
+              "ui.panel.config.zwave_js.provisioned.unprovision"
             )}
             .path=${mdiDelete}
             .provisioningEntry=${entry}

@@ -1,15 +1,13 @@
-import { css, CSSResultGroup, html, LitElement } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators";
 import { fireEvent } from "../../../../../common/dom/fire_event";
 import "../../../../../components/ha-textfield";
 import "../../../../../components/ha-yaml-editor";
 import "../../../../../components/user/ha-users-picker";
-import { EventTrigger } from "../../../../../data/automation";
-import { HomeAssistant } from "../../../../../types";
-import {
-  handleChangeEvent,
-  TriggerElement,
-} from "../ha-automation-trigger-row";
+import type { EventTrigger } from "../../../../../data/automation";
+import type { HomeAssistant } from "../../../../../types";
+import type { TriggerElement } from "../ha-automation-trigger-row";
+import { handleChangeEvent } from "../ha-automation-trigger-row";
 
 @customElement("ha-automation-trigger-event")
 export class HaEventTrigger extends LitElement implements TriggerElement {
@@ -103,13 +101,11 @@ export class HaEventTrigger extends LitElement implements TriggerElement {
     });
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      ha-textfield {
-        display: block;
-      }
-    `;
-  }
+  static styles = css`
+    ha-textfield {
+      display: block;
+    }
+  `;
 }
 
 declare global {

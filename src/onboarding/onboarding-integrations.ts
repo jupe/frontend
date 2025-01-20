@@ -1,24 +1,19 @@
-import { UnsubscribeFunc } from "home-assistant-js-websocket";
-import {
-  CSSResultGroup,
-  LitElement,
-  PropertyValues,
-  css,
-  html,
-  nothing,
-} from "lit";
+import type { UnsubscribeFunc } from "home-assistant-js-websocket";
+import type { CSSResultGroup, PropertyValues } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { isComponentLoaded } from "../common/config/is_component_loaded";
 import { fireEvent } from "../common/dom/fire_event";
 import { stringCompare } from "../common/string/compare";
-import { LocalizeFunc } from "../common/translations/localize";
+import type { LocalizeFunc } from "../common/translations/localize";
 import "../components/ha-button";
-import { ConfigEntry, subscribeConfigEntries } from "../data/config_entries";
+import type { ConfigEntry } from "../data/config_entries";
+import { subscribeConfigEntries } from "../data/config_entries";
 import { subscribeConfigFlowInProgress } from "../data/config_flow";
 import { domainToName } from "../data/integration";
 import { scanUSBDevices } from "../data/usb";
 import { SubscribeMixin } from "../mixins/subscribe-mixin";
-import { HomeAssistant } from "../types";
+import type { HomeAssistant } from "../types";
 import "./integration-badge";
 import { onBoardingStyles } from "./styles";
 
@@ -42,7 +37,7 @@ class OnboardingIntegrations extends SubscribeMixin(LitElement) {
 
   @state() private _discoveredDomains?: Set<string>;
 
-  public hassSubscribe(): Array<UnsubscribeFunc | Promise<UnsubscribeFunc>> {
+  public hassSubscribe(): (UnsubscribeFunc | Promise<UnsubscribeFunc>)[] {
     return [
       subscribeConfigFlowInProgress(this.hass, (flows) => {
         this._discoveredDomains = new Set(
@@ -60,7 +55,7 @@ class OnboardingIntegrations extends SubscribeMixin(LitElement) {
         (messages) => {
           let fullUpdate = false;
           const newEntries: ConfigEntry[] = [];
-          const integrations: Set<string> = new Set();
+          const integrations = new Set<string>();
           messages.forEach((message) => {
             if (message.type === null || message.type === "added") {
               if (HIDDEN_DOMAINS.has(message.entry.domain)) {
@@ -102,12 +97,12 @@ class OnboardingIntegrations extends SubscribeMixin(LitElement) {
       return nothing;
     }
     // Render discovered and existing entries together sorted by localized title.
-    let uniqueDomains: Set<string> = new Set();
+    let uniqueDomains = new Set<string>();
     this._entries.forEach((entry) => {
       uniqueDomains.add(entry.domain);
     });
     uniqueDomains = new Set([...uniqueDomains, ...this._discoveredDomains]);
-    let domains: Array<[string, string]> = [];
+    let domains: [string, string][] = [];
     for (const domain of uniqueDomains.values()) {
       domains.push([domain, domainToName(this.hass.localize, domain)]);
     }

@@ -6,13 +6,13 @@ import {
   mdiShield,
   mdiShieldOff,
 } from "@mdi/js";
-import {
+import type {
   HassEntityAttributeBase,
   HassEntityBase,
 } from "home-assistant-js-websocket";
 import { supportsFeature } from "../common/entity/supports-feature";
 import { showEnterCodeDialog } from "../dialogs/enter-code/show-enter-code-dialog";
-import { HomeAssistant } from "../types";
+import type { HomeAssistant } from "../types";
 import { getExtendedEntityRegistryEntry } from "./entity_registry";
 
 export const FORMAT_TEXT = "text";
@@ -63,11 +63,11 @@ export type AlarmMode =
   | "armed_custom_bypass"
   | "disarmed";
 
-type AlarmConfig = {
+interface AlarmConfig {
   service: string;
   feature?: AlarmControlPanelEntityFeature;
   path: string;
-};
+}
 export const ALARM_MODES: Record<AlarmMode, AlarmConfig> = {
   armed_home: {
     feature: AlarmControlPanelEntityFeature.ARM_HOME,

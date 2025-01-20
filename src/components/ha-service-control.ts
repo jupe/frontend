@@ -1,17 +1,11 @@
 import { mdiHelpCircle } from "@mdi/js";
-import {
+import type {
   HassService,
   HassServices,
   HassServiceTarget,
 } from "home-assistant-js-websocket";
-import {
-  css,
-  CSSResultGroup,
-  html,
-  LitElement,
-  nothing,
-  PropertyValues,
-} from "lit";
+import type { PropertyValues } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators";
 import memoizeOne from "memoize-one";
 import { ensureArray } from "../common/array/ensure-array";
@@ -19,10 +13,9 @@ import { fireEvent } from "../common/dom/fire_event";
 import { computeDomain } from "../common/entity/compute_domain";
 import { computeObjectId } from "../common/entity/compute_object_id";
 import { supportsFeature } from "../common/entity/supports-feature";
-import { nestedArrayMove } from "../common/util/array-move";
 import {
   fetchIntegrationManifest,
-  IntegrationManifest,
+  type IntegrationManifest,
 } from "../data/integration";
 import {
   areaMeetsTargetSelector,
@@ -32,10 +25,10 @@ import {
   expandDeviceTarget,
   expandFloorTarget,
   expandLabelTarget,
-  Selector,
-  TargetSelector,
+  type Selector,
+  type TargetSelector,
 } from "../data/selector";
-import { HomeAssistant, ValueChangedEvent } from "../types";
+import type { HomeAssistant, ValueChangedEvent } from "../types";
 import { documentationUrl } from "../util/documentation-url";
 import "./ha-checkbox";
 import "./ha-icon-button";
@@ -61,15 +54,19 @@ const showOptionalToggle = (field) =>
   !field.required &&
   !("boolean" in field.selector && field.default);
 
+interface Field extends Omit<HassService["fields"][string], "selector"> {
+  key: string;
+  selector?: Selector;
+}
+
 interface ExtHassService extends Omit<HassService, "fields"> {
-  fields: Array<
-    Omit<HassService["fields"][string], "selector"> & {
-      key: string;
-      selector?: Selector;
-      fields?: Record<string, Omit<HassService["fields"][string], "selector">>;
-      collapsed?: boolean;
-    }
-  >;
+  fields: (Omit<HassService["fields"][string], "selector"> & {
+    key: string;
+    selector?: Selector;
+    fields?: Record<string, Omit<HassService["fields"][string], "selector">>;
+    collapsed?: boolean;
+  })[];
+  flatFields: Field[];
   hasSelector: string[];
 }
 
@@ -87,11 +84,14 @@ export class HaServiceControl extends LitElement {
 
   @property({ type: Boolean, reflect: true }) public narrow = false;
 
-  @property({ type: Boolean }) public showAdvanced = false;
+  @property({ attribute: "show-advanced", type: Boolean }) public showAdvanced =
+    false;
 
-  @property({ type: Boolean, reflect: true }) public hidePicker = false;
+  @property({ attribute: "hide-picker", type: Boolean, reflect: true })
+  public hidePicker = false;
 
-  @property({ type: Boolean }) public hideDescription = false;
+  @property({ attribute: "hide-description", type: Boolean })
+  public hideDescription = false;
 
   @state() private _value!: this["value"];
 
@@ -177,7 +177,7 @@ export class HaServiceControl extends LitElement {
         if (!this._value.data) {
           this._value.data = {};
         }
-        serviceData.fields.forEach((field) => {
+        serviceData.flatFields.forEach((field) => {
           if (
             field.selector &&
             field.required &&
@@ -241,22 +241,28 @@ export class HaServiceControl extends LitElement {
         selector: value.selector as Selector | undefined,
       }));
 
+      const flatFields: Field[] = [];
       const hasSelector: string[] = [];
       fields.forEach((field) => {
         if ((field as any).fields) {
           Object.entries((field as any).fields).forEach(([key, subField]) => {
+            flatFields.push({ ...(subField as Field), key });
             if ((subField as any).selector) {
               hasSelector.push(key);
             }
           });
-        } else if (field.selector) {
-          hasSelector.push(field.key);
+        } else {
+          flatFields.push(field);
+          if (field.selector) {
+            hasSelector.push(field.key);
+          }
         }
       });
 
       return {
         ...serviceDomains[domain][serviceName],
         fields,
+        flatFields,
         hasSelector,
       };
     }
@@ -397,7 +403,7 @@ export class HaServiceControl extends LitElement {
 
     const hasOptional = Boolean(
       !shouldRenderServiceDataYaml &&
-        serviceData?.fields.some((field) => showOptionalToggle(field))
+        serviceData?.flatFields.some((field) => showOptionalToggle(field))
     );
 
     const targetEntities = this._getTargetedEntities(
@@ -585,15 +591,6 @@ export class HaServiceControl extends LitElement {
     }
 
     const selector = dataField?.selector ?? { text: undefined };
-    const type = Object.keys(selector)[0];
-    const enhancedSelector = ["action", "condition", "trigger"].includes(type)
-      ? {
-          [type]: {
-            ...selector[type],
-            path: [dataField.key],
-          },
-        }
-      : selector;
 
     const showOptional = showOptionalToggle(dataField);
 
@@ -634,7 +631,7 @@ export class HaServiceControl extends LitElement {
               (!this._value?.data ||
                 this._value.data[dataField.key] === undefined))}
             .hass=${this.hass}
-            .selector=${enhancedSelector}
+            .selector=${selector}
             .key=${dataField.key}
             @value-changed=${this._serviceDataChanged}
             .value=${this._value?.data
@@ -642,7 +639,6 @@ export class HaServiceControl extends LitElement {
               : undefined}
             .placeholder=${dataField.default}
             .localizeValue=${this._localizeValueCallback}
-            @item-moved=${this._itemMoved}
           ></ha-selector>
         </ha-settings-row>`
       : "";
@@ -667,7 +663,7 @@ export class HaServiceControl extends LitElement {
       const field = this._getServiceInfo(
         this._value?.action,
         this.hass.services
-      )?.fields.find((_field) => _field.key === key);
+      )?.flatFields.find((_field) => _field.key === key);
 
       let defaultValue = field?.default;
 
@@ -844,22 +840,6 @@ export class HaServiceControl extends LitElement {
     });
   }
 
-  private _itemMoved(ev) {
-    ev.stopPropagation();
-    const { oldIndex, newIndex, oldPath, newPath } = ev.detail;
-
-    const data = this.value?.data ?? {};
-
-    const newData = nestedArrayMove(data, oldIndex, newIndex, oldPath, newPath);
-
-    fireEvent(this, "value-changed", {
-      value: {
-        ...this.value,
-        data: newData,
-      },
-    });
-  }
-
   private _dataChanged(ev: CustomEvent) {
     ev.stopPropagation();
     if (!ev.detail.isValid) {
@@ -877,70 +857,68 @@ export class HaServiceControl extends LitElement {
     this._manifest = undefined;
     try {
       this._manifest = await fetchIntegrationManifest(this.hass, integration);
-    } catch (err: any) {
+    } catch (_err: any) {
       // Ignore if loading manifest fails. Probably bad JSON in manifest
     }
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      ha-settings-row {
-        padding: var(--service-control-padding, 0 16px);
-      }
-      ha-settings-row {
-        --paper-time-input-justify-content: flex-end;
-        --settings-row-content-width: 100%;
-        --settings-row-prefix-display: contents;
-        border-top: var(
-          --service-control-items-border-top,
-          1px solid var(--divider-color)
-        );
-      }
-      ha-service-picker,
-      ha-entity-picker,
-      ha-yaml-editor {
-        display: block;
-        margin: var(--service-control-padding, 0 16px);
-      }
-      ha-yaml-editor {
-        padding: 16px 0;
-      }
-      p {
-        margin: var(--service-control-padding, 0 16px);
-        padding: 16px 0;
-      }
-      :host([hidePicker]) p {
-        padding-top: 0;
-      }
-      .checkbox-spacer {
-        width: 32px;
-      }
-      ha-checkbox {
-        margin-left: -16px;
-        margin-inline-start: -16px;
-        margin-inline-end: initial;
-      }
-      .help-icon {
-        color: var(--secondary-text-color);
-      }
-      .description {
-        justify-content: space-between;
-        display: flex;
-        align-items: center;
-        padding-right: 2px;
-        padding-inline-end: 2px;
-        padding-inline-start: initial;
-      }
-      .description p {
-        direction: ltr;
-      }
-      ha-expansion-panel {
-        --ha-card-border-radius: 0;
-        --expansion-panel-summary-padding: 0 16px;
-        --expansion-panel-content-padding: 0;
-      }
-    `;
-  }
+  static styles = css`
+    ha-settings-row {
+      padding: var(--service-control-padding, 0 16px);
+    }
+    ha-settings-row {
+      --paper-time-input-justify-content: flex-end;
+      --settings-row-content-width: 100%;
+      --settings-row-prefix-display: contents;
+      border-top: var(
+        --service-control-items-border-top,
+        1px solid var(--divider-color)
+      );
+    }
+    ha-service-picker,
+    ha-entity-picker,
+    ha-yaml-editor {
+      display: block;
+      margin: var(--service-control-padding, 0 16px);
+    }
+    ha-yaml-editor {
+      padding: 16px 0;
+    }
+    p {
+      margin: var(--service-control-padding, 0 16px);
+      padding: 16px 0;
+    }
+    :host([hidePicker]) p {
+      padding-top: 0;
+    }
+    .checkbox-spacer {
+      width: 32px;
+    }
+    ha-checkbox {
+      margin-left: -16px;
+      margin-inline-start: -16px;
+      margin-inline-end: initial;
+    }
+    .help-icon {
+      color: var(--secondary-text-color);
+    }
+    .description {
+      justify-content: space-between;
+      display: flex;
+      align-items: center;
+      padding-right: 2px;
+      padding-inline-end: 2px;
+      padding-inline-start: initial;
+    }
+    .description p {
+      direction: ltr;
+    }
+    ha-expansion-panel {
+      --ha-card-border-radius: 0;
+      --expansion-panel-summary-padding: 0 16px;
+      --expansion-panel-content-padding: 0;
+    }
+  `;
 }
 
 declare global {

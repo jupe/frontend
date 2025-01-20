@@ -1,27 +1,22 @@
 import { mdiPlay, mdiStop } from "@mdi/js";
 import "@material/mwc-button";
-import { HassEntity } from "home-assistant-js-websocket";
-import {
-  css,
-  CSSResultGroup,
-  html,
-  LitElement,
-  nothing,
-  PropertyValues,
-} from "lit";
+import type { HassEntity } from "home-assistant-js-websocket";
+import type { PropertyValues } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import "../../../components/ha-relative-time";
 import "../../../components/ha-service-control";
 import "../../../components/ha-control-button";
 import "../../../components/ha-control-button-group";
 import "../../../components/entity/state-info";
-import { HomeAssistant } from "../../../types";
-import { canRun, ScriptEntity } from "../../../data/script";
+import type { HomeAssistant } from "../../../types";
+import type { ScriptEntity } from "../../../data/script";
+import { canRun } from "../../../data/script";
 import { isUnavailableState } from "../../../data/entity";
 import { computeObjectId } from "../../../common/entity/compute_object_id";
 import { listenMediaQuery } from "../../../common/dom/media_query";
 import "../components/ha-more-info-state-header";
-import { ExtEntityRegistryEntry } from "../../../data/entity_registry";
+import type { ExtEntityRegistryEntry } from "../../../data/entity_registry";
 
 @customElement("more-info-script")
 class MoreInfoScript extends LitElement {
@@ -104,8 +99,8 @@ class MoreInfoScript extends LitElement {
                 ${this.hass.localize("ui.card.script.run_script")}
               </div>
               <ha-service-control
-                hidePicker
-                hideDescription
+                hide-picker
+                hide-description
                 .hass=${this.hass}
                 .value=${this._scriptData}
                 .showAdvanced=${this.hass.userData?.showAdvanced}
@@ -204,37 +199,35 @@ class MoreInfoScript extends LitElement {
     return false;
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      .queue {
-        visibility: hidden;
-        color: var(--secondary-text-color);
-        text-align: center;
-        margin-bottom: 16px;
-        height: 21px;
-      }
-      .queue.has-queue {
-        visibility: visible;
-      }
-      .fields {
-        padding: 16px;
-        border: 1px solid var(--divider-color);
-        border-radius: 8px;
-        margin-bottom: 16px;
-      }
-      .fields .title {
-        font-weight: bold;
-      }
-      ha-control-button ha-svg-icon {
-        z-index: -1;
-        margin-right: 4px;
-      }
-      ha-service-control {
-        --service-control-padding: 0;
-        --service-control-items-border-top: none;
-      }
-    `;
-  }
+  static styles = css`
+    .queue {
+      visibility: hidden;
+      color: var(--secondary-text-color);
+      text-align: center;
+      margin-bottom: 16px;
+      height: 21px;
+    }
+    .queue.has-queue {
+      visibility: visible;
+    }
+    .fields {
+      padding: 16px;
+      border: 1px solid var(--divider-color);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .fields .title {
+      font-weight: bold;
+    }
+    ha-control-button ha-svg-icon {
+      z-index: -1;
+      margin-right: 4px;
+    }
+    ha-service-control {
+      --service-control-padding: 0;
+      --service-control-items-border-top: none;
+    }
+  `;
 }
 
 declare global {

@@ -1,4 +1,4 @@
-import { LovelaceCardConfig } from "../../../data/lovelace/config/card";
+import type { LovelaceCardConfig } from "../../../data/lovelace/config/card";
 import "../cards/hui-entity-card";
 import "../cards/hui-entities-card";
 import "../cards/hui-button-card";
@@ -65,6 +65,7 @@ const LAZY_LOAD_TYPES = {
     import("../cards/energy/hui-energy-sources-table-card"),
   "energy-usage-graph": () =>
     import("../cards/energy/hui-energy-usage-graph-card"),
+  "energy-sankey": () => import("../cards/energy/hui-energy-sankey-card"),
   "entity-filter": () => import("../cards/hui-entity-filter-card"),
   error: () => import("../cards/hui-error-card"),
   gauge: () => import("../cards/hui-gauge-card"),

@@ -1,4 +1,4 @@
-import { ActionDetail } from "@material/mwc-list";
+import type { ActionDetail } from "@material/mwc-list";
 import {
   mdiDelete,
   mdiDotsVertical,
@@ -7,14 +7,14 @@ import {
   mdiPlus,
 } from "@mdi/js";
 import {
-  CSSResultGroup,
   LitElement,
-  TemplateResult,
+  type PropertyValues,
+  type TemplateResult,
   css,
   html,
   nothing,
 } from "lit";
-import { customElement, property } from "lit/decorators";
+import { customElement, property, state } from "lit/decorators";
 import { styleMap } from "lit/directives/style-map";
 import memoizeOne from "memoize-one";
 import { formatListWithAnds } from "../../../common/string/format-list";
@@ -23,13 +23,13 @@ import "../../../components/ha-floor-icon";
 import "../../../components/ha-icon-button";
 import "../../../components/ha-sortable";
 import "../../../components/ha-svg-icon";
+import type { AreaRegistryEntry } from "../../../data/area_registry";
 import {
-  AreaRegistryEntry,
   createAreaRegistryEntry,
   updateAreaRegistryEntry,
 } from "../../../data/area_registry";
+import type { FloorRegistryEntry } from "../../../data/floor_registry";
 import {
-  FloorRegistryEntry,
   createFloorRegistryEntry,
   deleteFloorRegistryEntry,
   getFloorAreaLookup,
@@ -40,7 +40,7 @@ import {
   showConfirmationDialog,
 } from "../../../dialogs/generic/show-dialog-box";
 import "../../../layouts/hass-tabs-subpage";
-import { HomeAssistant, Route } from "../../../types";
+import type { HomeAssistant, Route } from "../../../types";
 import "../ha-config-section";
 import { configSections } from "../ha-panel-config";
 import {
@@ -49,7 +49,7 @@ import {
 } from "./show-dialog-area-registry-detail";
 import { showFloorRegistryDetailDialog } from "./show-dialog-floor-registry-detail";
 
-const UNASSIGNED_PATH = ["__unassigned__"];
+const UNASSIGNED_FLOOR = "__unassigned__";
 
 const SORT_OPTIONS = { sort: false, delay: 500, delayOnTouchOnly: true };
 
@@ -57,15 +57,17 @@ const SORT_OPTIONS = { sort: false, delay: 500, delayOnTouchOnly: true };
 export class HaConfigAreasDashboard extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @property({ type: Boolean }) public isWide = false;
+  @property({ attribute: "is-wide", type: Boolean }) public isWide = false;
 
   @property({ type: Boolean }) public narrow = false;
 
   @property({ attribute: false }) public route!: Route;
 
+  @state() private _areas: AreaRegistryEntry[] = [];
+
   private _processAreas = memoizeOne(
     (
-      areas: HomeAssistant["areas"],
+      areas: AreaRegistryEntry[],
       devices: HomeAssistant["devices"],
       entities: HomeAssistant["entities"],
       floors: HomeAssistant["floors"]
@@ -99,8 +101,8 @@ export class HaConfigAreasDashboard extends LitElement {
         };
       };
 
-      const floorAreaLookup = getFloorAreaLookup(Object.values(areas));
-      const unassisgnedAreas = Object.values(areas).filter(
+      const floorAreaLookup = getFloorAreaLookup(areas);
+      const unassignedAreas = areas.filter(
         (area) => !area.floor_id || !floorAreaLookup[area.floor_id]
       );
       return {
@@ -108,10 +110,20 @@ export class HaConfigAreasDashboard extends LitElement {
           ...floor,
           areas: (floorAreaLookup[floor.floor_id] || []).map(processArea),
         })),
-        unassisgnedAreas: unassisgnedAreas.map(processArea),
+        unassignedAreas: unassignedAreas.map(processArea),
       };
     }
   );
+
+  protected willUpdate(changedProperties: PropertyValues<this>): void {
+    super.willUpdate(changedProperties);
+    if (changedProperties.has("hass")) {
+      const oldHass = changedProperties.get("hass");
+      if (this.hass.areas !== oldHass?.areas) {
+        this._areas = Object.values(this.hass.areas);
+      }
+    }
+  }
 
   protected render(): TemplateResult {
     const areasAndFloors =
@@ -121,7 +133,7 @@ export class HaConfigAreasDashboard extends LitElement {
       !this.hass.floors
         ? undefined
         : this._processAreas(
-            this.hass.areas,
+            this._areas,
             this.hass.devices,
             this.hass.entities,
             this.hass.floors
@@ -183,10 +195,10 @@ export class HaConfigAreasDashboard extends LitElement {
                 <ha-sortable
                   handle-selector="a"
                   draggable-selector="a"
-                  @item-moved=${this._areaMoved}
+                  @item-added=${this._areaAdded}
                   group="floor"
                   .options=${SORT_OPTIONS}
-                  .path=${[floor.floor_id]}
+                  .floor=${floor.floor_id}
                 >
                   <div class="areas">
                     ${floor.areas.map((area) => this._renderArea(area))}
@@ -194,7 +206,7 @@ export class HaConfigAreasDashboard extends LitElement {
                 </ha-sortable>
               </div>`
           )}
-          ${areasAndFloors?.unassisgnedAreas.length
+          ${areasAndFloors?.unassignedAreas.length
             ? html`<div class="floor">
                 <div class="header">
                   <h2>
@@ -206,13 +218,13 @@ export class HaConfigAreasDashboard extends LitElement {
                 <ha-sortable
                   handle-selector="a"
                   draggable-selector="a"
-                  @item-moved=${this._areaMoved}
+                  @item-added=${this._areaAdded}
                   group="floor"
                   .options=${SORT_OPTIONS}
-                  .path=${UNASSIGNED_PATH}
+                  .floor=${UNASSIGNED_FLOOR}
                 >
                   <div class="areas">
-                    ${areasAndFloors?.unassisgnedAreas.map((area) =>
+                    ${areasAndFloors?.unassignedAreas.map((area) =>
                       this._renderArea(area)
                     )}
                   </div>
@@ -246,7 +258,10 @@ export class HaConfigAreasDashboard extends LitElement {
   }
 
   private _renderArea(area) {
-    return html`<a href=${`/config/areas/area/${area.area_id}`}>
+    return html`<a
+      href=${`/config/areas/area/${area.area_id}`}
+      .sortableData=${area}
+    >
       <ha-card outlined>
         <div
           style=${styleMap({
@@ -309,26 +324,23 @@ export class HaConfigAreasDashboard extends LitElement {
     });
   }
 
-  private async _areaMoved(ev) {
-    const areasAndFloors = this._processAreas(
-      this.hass.areas,
-      this.hass.devices,
-      this.hass.entities,
-      this.hass.floors
-    );
-    let area: AreaRegistryEntry;
-    if (ev.detail.oldPath === UNASSIGNED_PATH) {
-      area = areasAndFloors.unassisgnedAreas[ev.detail.oldIndex];
-    } else {
-      const oldFloor = areasAndFloors.floors!.find(
-        (floor) => floor.floor_id === ev.detail.oldPath[0]
-      );
-      area = oldFloor!.areas[ev.detail.oldIndex];
-    }
+  private async _areaAdded(ev) {
+    ev.stopPropagation();
+    const { floor } = ev.currentTarget;
+
+    const newFloorId = floor === UNASSIGNED_FLOOR ? null : floor;
+
+    const { data: area } = ev.detail;
+
+    this._areas = this._areas.map<AreaRegistryEntry>((a) => {
+      if (a.area_id === area.area_id) {
+        return { ...a, floor_id: newFloorId };
+      }
+      return a;
+    });
 
     await updateAreaRegistryEntry(this.hass, area.area_id, {
-      floor_id:
-        ev.detail.newPath === UNASSIGNED_PATH ? null : ev.detail.newPath[0],
+      floor_id: newFloorId,
     });
   }
 
@@ -429,82 +441,80 @@ export class HaConfigAreasDashboard extends LitElement {
     });
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      .container {
-        padding: 8px 16px 16px;
-        margin: 0 auto 64px auto;
-      }
-      .header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        color: var(--secondary-text-color);
-        padding-inline-start: 8px;
-      }
-      .header h2 {
-        font-size: 14px;
-        font-weight: 500;
-        margin-top: 28px;
-      }
-      .header ha-icon {
-        margin-inline-end: 8px;
-      }
-      .areas {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        grid-gap: 16px 16px;
-        max-width: 2000px;
-        margin-bottom: 16px;
-      }
-      .areas > * {
-        max-width: 500px;
-      }
-      ha-card {
-        overflow: hidden;
-      }
-      a {
-        text-decoration: none;
-      }
-      h1 {
-        padding-bottom: 0;
-      }
-      .picture {
-        height: 150px;
-        width: 100%;
-        background-size: cover;
-        background-position: center;
-        position: relative;
-      }
-      .placeholder {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        --mdc-icon-size: 48px;
-      }
-      .picture.placeholder::before {
-        position: absolute;
-        content: "";
-        width: 100%;
-        height: 100%;
-        background-color: var(--sidebar-selected-icon-color);
-        opacity: 0.12;
-      }
-      .card-content {
-        min-height: 16px;
-        color: var(--secondary-text-color);
-      }
-      .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        overflow-wrap: anywhere;
-      }
-      .warning {
-        color: var(--error-color);
-      }
-    `;
-  }
+  static styles = css`
+    .container {
+      padding: 8px 16px 16px;
+      margin: 0 auto 64px auto;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--secondary-text-color);
+      padding-inline-start: 8px;
+    }
+    .header h2 {
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 28px;
+    }
+    .header ha-icon {
+      margin-inline-end: 8px;
+    }
+    .areas {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      grid-gap: 16px 16px;
+      max-width: 2000px;
+      margin-bottom: 16px;
+    }
+    .areas > * {
+      max-width: 500px;
+    }
+    ha-card {
+      overflow: hidden;
+    }
+    a {
+      text-decoration: none;
+    }
+    h1 {
+      padding-bottom: 0;
+    }
+    .picture {
+      height: 150px;
+      width: 100%;
+      background-size: cover;
+      background-position: center;
+      position: relative;
+    }
+    .placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      --mdc-icon-size: 48px;
+    }
+    .picture.placeholder::before {
+      position: absolute;
+      content: "";
+      width: 100%;
+      height: 100%;
+      background-color: var(--sidebar-selected-icon-color);
+      opacity: 0.12;
+    }
+    .card-content {
+      min-height: 16px;
+      color: var(--secondary-text-color);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      overflow-wrap: anywhere;
+    }
+    .warning {
+      color: var(--error-color);
+    }
+  `;
 }
 
 declare global {
